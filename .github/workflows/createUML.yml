@@ -3,7 +3,7 @@ name: Generate UML Diagrams
 on:
   push:
     branches:
-      - '*UML:*'
+      - '*UML_*'
 
 jobs:
   generate-uml-diagrams:
