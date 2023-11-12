@@ -1,6 +1,7 @@
 name: Generate UML Diagrams
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - '*UML_*'
