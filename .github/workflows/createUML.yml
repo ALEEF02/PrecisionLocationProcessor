@@ -1,0 +1,44 @@
+name: Generate UML Diagrams
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '*UML_*'
+
+jobs:
+  generate-uml-diagrams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Install draw.io CLI
+        run: |
+          wget https://github.com/jgraph/drawio-desktop/releases/download/v22.0.3/drawio-x86_64-22.0.3.AppImage -O drawio
+          chmod +x drawio
+
+      - name: Generate UML Diagrams
+        run: |
+          mkdir -p UML/diagrams
+          for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML:.*\.drawio$'); do
+            filename=$(basename -- "$file")
+            filename_noext="${filename%.*}"
+            output_path="UML/diagrams/${filename_noext}.png"
+            ./drawio --export -o "$output_path" "$file"
+          done
+
+      - name: Commit changes
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add UML/diagrams
+          git commit -m "Add generated UML diagrams"
+          git push
