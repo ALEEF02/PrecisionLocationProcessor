@@ -30,7 +30,7 @@ jobs:
       - name: Generate UML Diagrams
         run: |
           mkdir -p UML/diagrams
-          for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML:.*\.drawio$'); do
+          for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML/.*\.drawio$'); do
             filename=$(basename -- "$file")
             filename_noext="${filename%.*}"
             output_path="UML/diagrams/${filename_noext}.png"
