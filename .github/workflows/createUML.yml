@@ -26,6 +26,7 @@ jobs:
         run: |
           wget https://github.com/jgraph/drawio-desktop/releases/download/v22.0.3/drawio-x86_64-22.0.3.AppImage -O drawio
           chmod +x drawio
+          ./drawio --appimage-extract
 
       - name: Generate UML Diagrams
         run: |
