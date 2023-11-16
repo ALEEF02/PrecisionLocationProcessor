@@ -24,9 +24,11 @@ jobs:
 
       - name: Install draw.io CLI
         run: |
+          apt update && apt -y upgrade
+          apt -y install curl xvfb nano libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libappindicator3-1 libsecret-1-0 libgbm1
           wget https://github.com/jgraph/drawio-desktop/releases/download/v22.0.3/drawio-x86_64-22.0.3.AppImage -O drawio
           chmod +x drawio
-          sudo apt-get install fuse libfuse2
+          ./drawio --appimage-extract
 
       - name: Generate UML Diagrams
         run: |
@@ -42,7 +44,7 @@ jobs:
             filename_noext="${filename%.*}"
             output_path="UML/diagrams/${filename_noext}.png"
             echo "Found .drawio file: $file  $filename  $filename_noext  $output_path"
-            ./drawio -x -f png --scale 2 -o "$output_path" "$file"
+            xvfb-run -a /squashfs-root/drawio -x -f png --scale 2 -o "$output_path" "$file" --disable-gpu --headless --no-sandbox
           done
 
       - name: Commit changes
