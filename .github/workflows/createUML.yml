@@ -26,7 +26,7 @@ jobs:
         run: |
           wget https://github.com/jgraph/drawio-desktop/releases/download/v22.0.3/drawio-x86_64-22.0.3.AppImage -O drawio
           chmod +x drawio
-          ./drawio --appimage-extract
+          sudo apt-get install fuse libfuse2
 
       - name: Generate UML Diagrams
         run: |
@@ -41,7 +41,7 @@ jobs:
             filename=$(basename -- "$file")
             filename_noext="${filename%.*}"
             output_path="UML/diagrams/${filename_noext}.png"
-            echo "Found .drawio file: $file\t$filename\t$filename_noext\t$output_path"
+            echo "Found .drawio file: $file  $filename  $filename_noext  $output_path"
             ./drawio -x -f png --scale 2 -o "$output_path" "$file"
           done
 
