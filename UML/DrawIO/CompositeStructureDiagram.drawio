@@ -1,0 +1,48 @@
+<mxfile host="app.diagrams.net" modified="2023-11-25T23:28:24.687Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36" etag="GlnX8q2eHMPU4ZNoZOJH" version="22.1.3" type="device">
+  <diagram name="Page-1" id="3pkYmdsxsWpQNdc9NgNo">
+    <mxGraphModel dx="1050" dy="574" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-12" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DataFilter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;div style=&quot;height:2px;&quot;&gt;&lt;b&gt;&lt;i&gt;&amp;nbsp;Are we still having DataFilter hold all of the active conditions?&lt;/i&gt;&lt;/b&gt;&lt;/div&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="10" y="10" width="1440" height="520" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-10" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;LightPollution&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;div style=&quot;height:2px;&quot;&gt;&lt;br&gt;&lt;/div&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="490" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-14" value="-minimumSQM : Integer" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="205" y="140" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="8C2b09eH_FzoGvY_wZyD-15" target="8C2b09eH_FzoGvY_wZyD-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-15" value="-locations : ArrayType&amp;lt;Location&amp;gt;" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="60" y="230" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="8C2b09eH_FzoGvY_wZyD-17" target="8C2b09eH_FzoGvY_wZyD-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-20" value="Process" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="8C2b09eH_FzoGvY_wZyD-18">
+          <mxGeometry x="0.3452" y="-1" relative="1" as="geometry">
+            <mxPoint x="-26" y="-24" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-17" value="&lt;div&gt;data : ArrayType&amp;lt;Location, SQM&amp;gt;&lt;/div&gt;" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="350" y="230" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-21" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AstralEvent&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;div style=&quot;height:2px;&quot;&gt;&lt;br&gt;&lt;/div&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="550" y="80" width="490" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-22" value="&lt;div&gt;-eclipses : ArrayType&amp;lt;Eclipse&amp;gt;&lt;/div&gt;" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="610" y="150" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;" edge="1" parent="1" source="8C2b09eH_FzoGvY_wZyD-23" target="8C2b09eH_FzoGvY_wZyD-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8C2b09eH_FzoGvY_wZyD-23" value="&lt;div&gt;-position : EclipsePosition&lt;/div&gt;" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="800" y="150" width="140" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
