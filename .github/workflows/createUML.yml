@@ -25,7 +25,7 @@ jobs:
 
       - name: Check for DrawIO files
         run: |
-          if [ -z "$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML/.*\.drawio$')" ]; then
+          if [ -z "$(git diff --diff-filter=MA --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML/.*\.drawio$')" ]; then
             echo "No .drawio files found. Exiting with success."
             exit 0
           fi
