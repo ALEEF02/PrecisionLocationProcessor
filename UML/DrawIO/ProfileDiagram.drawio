@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2023-12-04T03:14:10.147Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="mtOZ7Ez-XRG2DBYVd6aB" version="22.1.2" type="device">
+<mxfile host="Electron" modified="2023-12-04T23:02:55.234Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="LgRDJKQk4BrVVG-f7rFc" version="22.1.2" type="device">
   <diagram name="Page-1" id="sG-iVkph72n37jZIMQ_9">
-    <mxGraphModel dx="1300" dy="903" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="882" dy="619" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -130,6 +130,9 @@
         </mxCell>
         <mxCell id="1Yhe4vhAS-XiODtyZWqo-17" value="" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=10;height=15;" vertex="1" parent="1">
           <mxGeometry x="425" y="390" width="180" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="bQeTeKQ2QCXX46uz3CVd-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tlefaPczOhtO-pGomzKn-1" target="1Yhe4vhAS-XiODtyZWqo-16">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="tlefaPczOhtO-pGomzKn-1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&amp;lt;&amp;lt;condition&amp;gt;&amp;gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Weather&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;div style=&quot;height:2px;&quot;&gt;&lt;/div&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
           <mxGeometry x="445" y="650" width="140" height="60" as="geometry" />
