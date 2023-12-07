@@ -32,9 +32,9 @@ jobs:
         run: |
           if [ -z "$(git diff --diff-filter=MA --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML/.*\.drawio$')" ]; then
             echo "No .drawio files found. Exiting with success."
-            echo "::set-output name=skip_steps::true"
+            echo "skip_steps=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=skip_steps::false"
+            echo "skip_steps=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Generate DrawIO png files
