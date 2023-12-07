@@ -32,10 +32,13 @@ jobs:
         run: |
           if [ -z "$(git diff --diff-filter=MA --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^UML/.*\.drawio$')" ]; then
             echo "No .drawio files found. Exiting with success."
-            exit 0
+            echo "skip_steps=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_steps=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Generate DrawIO png files
+        if: steps.check-for-drawio-files.outputs.skip_steps != 'true'
         uses: rlespinasse/drawio-export-action@v2
         with:
           format: png
@@ -43,6 +46,7 @@ jobs:
           output: ../diagrams
 
       - name: Commit changes
+        if: steps.check-for-drawio-files.outputs.skip_steps != 'true'
         run: |
           git status
           git config user.name "${{ github.actor }}"
