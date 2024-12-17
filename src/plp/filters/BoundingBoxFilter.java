@@ -1,9 +1,13 @@
 package plp.filters;
 
+import java.awt.GridLayout;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
@@ -28,7 +32,17 @@ public class BoundingBoxFilter implements Filter {
             throw new RuntimeException("Failed to initialize H3 library", e);
         }
     }
+    
+	@Override
+	public void setRequirements(JTextField[] requirements) {
+        double minLat = Double.parseDouble(requirements[0].getText());
+        double maxLat = Double.parseDouble(requirements[1].getText());
+        double minLon = Double.parseDouble(requirements[2].getText());
+        double maxLon = Double.parseDouble(requirements[3].getText());
+    	setRequirements(new double[]{minLat, maxLat, minLon, maxLon});
+	}
 
+	@Override
     public void setRequirements(Object requirements) {
         if (requirements instanceof double[]) {
             double[] bounds = (double[]) requirements;
@@ -86,5 +100,29 @@ public class BoundingBoxFilter implements Filter {
     	return validCells.stream()
                 .map(LocationCell::new)
                 .toList();
+    }
+    
+    @Override
+    public JPanel getParameterPanel() {
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        
+        panel.add(new JLabel("Min Latitude:"));
+        JTextField minLatField = new JTextField("37.7749");
+        panel.add(minLatField);
+        
+        panel.add(new JLabel("Max Latitude:"));
+        JTextField maxLatField = new JTextField("37.8049");
+        panel.add(maxLatField);
+        
+        panel.add(new JLabel("Min Longitude:"));
+        JTextField minLonField = new JTextField("-122.4194");
+        panel.add(minLonField);
+        
+        panel.add(new JLabel("Max Longitude:"));
+        JTextField maxLonField = new JTextField("-122.3994");
+        panel.add(maxLonField);
+
+        panel.putClientProperty("fields", new JTextField[]{minLatField, maxLatField, minLonField, maxLonField});
+        return panel;
     }
 }
