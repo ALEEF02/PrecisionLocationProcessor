@@ -1,2 +1,4 @@
 # DrawIO backup files
 **/*.bkp
+/bin/
+/target/
