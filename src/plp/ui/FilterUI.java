@@ -106,21 +106,11 @@ public class FilterUI extends JFrame {
         Filter filter = availableFilters.get(selectedFilter);
 
         if (filter != null) {
-            JTextField[] fields = (JTextField[]) ((JComponent) parameterPanel.getComponent(0)).getClientProperty("fields"); // Get the first component (the filter's parameter panel), Extract input fields
-
             try {
-            	String[] inputValues = new String[fields.length];
-                for (int i = 0; i < fields.length; i++) {
-                    // Explicitly focus out of each field to ensure the latest value is captured
-                    fields[i].transferFocus();
-                    inputValues[i] = fields[i].getText();
-                }
-            	
-                System.out.println(Arrays.toString(inputValues));
-                
-                filter.setRequirements(fields); // Set the requirements dynamically
+            	JPanel filterParameterPanel = (JPanel) parameterPanel.getComponent(0);
+                filter.setRequirements(filterParameterPanel); // Set the requirements dynamically
                 addedFilters.add(filter); // Add filter instance to the list
-                filterListModel.addElement(selectedFilter + ": " + Arrays.toString(inputValues));
+                filterListModel.addElement(selectedFilter + ": " + filter.getRequirements());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage());
             }

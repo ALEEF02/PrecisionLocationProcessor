@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
@@ -34,16 +35,30 @@ public class BoundingBoxFilter implements Filter {
     }
     
 	@Override
-	public void setRequirements(JTextField[] requirements) {
-        double minLat = Double.parseDouble(requirements[0].getText());
-        double maxLat = Double.parseDouble(requirements[1].getText());
-        double minLon = Double.parseDouble(requirements[2].getText());
-        double maxLon = Double.parseDouble(requirements[3].getText());
-    	setRequirements(new double[]{minLat, maxLat, minLon, maxLon});
+	public void setRequirements(JPanel modifiedParameterPanel) {
+    	JTextField[] fields = (JTextField[]) modifiedParameterPanel.getClientProperty("fields"); // Get the first component (the filter's parameter panel), Extract input fields
+
+        try {
+        	String[] inputValues = new String[fields.length];
+            for (int i = 0; i < fields.length; i++) {
+                // Explicitly focus out of each field to ensure the latest value is captured
+                fields[i].transferFocus();
+                inputValues[i] = fields[i].getText();
+            }
+
+            System.out.println(Arrays.toString(inputValues));
+            double minLat = Double.parseDouble(inputValues[0]);
+            double maxLat = Double.parseDouble(inputValues[1]);
+            double minLon = Double.parseDouble(inputValues[2]);
+            double maxLon = Double.parseDouble(inputValues[3]);
+        	setRequirements(new double[]{minLat, maxLat, minLon, maxLon});
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(modifiedParameterPanel, "Invalid input: " + ex.getMessage());
+        }
 	}
 
 	@Override
-    public void setRequirements(Object requirements) {
+    public void setRequirements(Object requirements) throws IllegalArgumentException {
         if (requirements instanceof double[]) {
             double[] bounds = (double[]) requirements;
             if (bounds.length == 4) {
@@ -66,6 +81,12 @@ public class BoundingBoxFilter implements Filter {
             throw new IllegalArgumentException("Invalid requirement type for BoundingBoxFilter");
         }
     }
+
+	@Override
+	public String getRequirements() {
+		// TODO Auto-generated method stub
+		return String.valueOf(minLatitude) + " -> " + String.valueOf(maxLatitude) + ", " + String.valueOf(minLongitude) + " -> " + String.valueOf(maxLongitude);
+	}
     
     private void validateBounds(double[] bounds) {
         double minLat = bounds[0];
@@ -73,19 +94,29 @@ public class BoundingBoxFilter implements Filter {
         double minLon = bounds[2];
         double maxLon = bounds[3];
 
-        if (minLat < -90 || maxLat > 90 || minLat > maxLat) {
-            throw new IllegalArgumentException("Latitude values must be between -90 and 90, with minLat <= maxLat.");
+        if (minLat < -90 || maxLat > 90) {
+            throw new IllegalArgumentException("Latitude values must be between -90 and 90.");
+        }
+        
+        if (minLat > maxLat) {
+            throw new IllegalArgumentException("Latitude minLat must be <= maxLat.");
         }
 
-        if (minLon < -180 || maxLon > 180 || minLon > maxLon) {
-            throw new IllegalArgumentException("Longitude values must be between -180 and 180, with minLon <= maxLon.");
+        if (minLon < -180 || maxLon > 180) {
+            throw new IllegalArgumentException("Longitude values must be between -180 and 180.");
+        }
+
+        if (minLon > maxLon) {
+            throw new IllegalArgumentException("Longitude minLon must be <= maxLon.");
         }
     }
 
+    @Override
     public void setLocations(List<LocationCell> locations) {
         this.locations = locations;
     } 
 
+    @Override
     public List<LocationCell> process() {
         return locations.stream()
                 .filter(cell -> validCells.contains(cell.getH3Index()))

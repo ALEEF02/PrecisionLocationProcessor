@@ -15,13 +15,14 @@ public class LightPollutionFilter implements Filter {
     private List<LocationCell> locations;
     
 	@Override
-	public void setRequirements(JTextField[] requirements) {
-        double minLat = Double.parseDouble(requirements[0].getText());
+	public void setRequirements(JPanel modifiedParameterPanel) throws IllegalArgumentException {
+		JTextField[] fields = (JTextField[]) modifiedParameterPanel.getClientProperty("fields");
+        double minLat = Double.parseDouble(fields[0].getText());
     	setRequirements(minLat);
 	}
 
 	@Override
-    public void setRequirements(Object requirements) {
+    public void setRequirements(Object requirements) throws IllegalArgumentException {
         if (requirements instanceof Double) {
             this.minSQM = (Double) requirements;
         } else {
@@ -29,10 +30,12 @@ public class LightPollutionFilter implements Filter {
         }
     }
 
+	@Override
     public void setLocations(List<LocationCell> locations) {
         this.locations = locations;
     }
 
+    @Override
     public List<LocationCell> process() {
         // Simulate filtering locations based on light pollution
         return locations.stream()
@@ -49,4 +52,9 @@ public class LightPollutionFilter implements Filter {
         panel.putClientProperty("fields", new JTextField[]{minSQMField});
         return panel;
     }
+
+	@Override
+	public String getRequirements() {
+		return "Minimum SQM: " + String.valueOf(minSQM);
+	}
 }
