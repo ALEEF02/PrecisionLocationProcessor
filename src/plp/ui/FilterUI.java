@@ -4,17 +4,30 @@ import org.reflections.Reflections;
 
 import plp.filter.DataFilter;
 import plp.filter.Filter;
+import plp.filters.BoundingBoxFilter;
 import plp.location.LocationCell;
 import plp.output.KMLGenerator;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.List;
 
+/**
+ * FilterUI - A dynamic UI for managing and configuring filters.
+ * 
+ * This class provides a Swing-based graphical user interface that dynamically loads
+ * filters from the "filters" package, renders appropriate parameter input components,
+ * allows users to configure the filters, and executes the filter pipeline to generate
+ * a KML file.
+ * 
+ * Key Features:
+ * - Dynamic filter discovery using reflection.
+ * - Custom parameter input components for each filter.
+ * - Visual list of configured filters.
+ * - Execution of filters and KML generation.
+ */
 public class FilterUI extends JFrame {
     private JComboBox<String> filterSelectionBox;
     private JPanel parameterPanel;
@@ -122,16 +135,34 @@ public class FilterUI extends JFrame {
      * Displays a success message upon completion.
      */
     private void runFilters() {
-        DataFilter dataFilter = new DataFilter(); // Initialize the DataFilter pipeline
+    	DataFilter dataFilter = null;
+    	BoundingBoxFilter initialBounds = null;
+
+        // Find the first BoundingBoxFilter in the list
+        for (Filter filter : addedFilters) {
+            if (filter instanceof BoundingBoxFilter) {
+            	initialBounds = (BoundingBoxFilter) filter;
+                dataFilter = new DataFilter(initialBounds);
+                break;
+            }
+        }
+
+        if (dataFilter == null) {
+            JOptionPane.showMessageDialog(this, "Error: A BoundingBoxFilter is required to start the pipeline.",
+                    "Missing BoundingBoxFilter", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
         // Add all configured filters to the pipeline
         for (Filter filter : addedFilters) {
+        	if (filter.equals(initialBounds)) continue;
             dataFilter.addFilter(filter);
         }
         
         // Run the filters and generate KML
         List<LocationCell> filteredLocations = dataFilter.filterLocations();
         KMLGenerator.generateKML(filteredLocations, "ui_filtered_hexagons.kml");
+        KMLGenerator.openKMLInGoogleEarth("ui_filtered_hexagons.kml");
         JOptionPane.showMessageDialog(this, "Filters applied! KML file generated: ui_filtered_hexagons.kml");
     }
 

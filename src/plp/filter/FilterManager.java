@@ -14,10 +14,12 @@ public class FilterManager {
 
     public List<LocationCell> applyFilters(List<LocationCell> locations) {
         List<LocationCell> filteredLocations = locations;
+        System.out.println("Inital bounds: " + filteredLocations.size());
 
         for (Filter filter : filters) {
             filter.setLocations(filteredLocations);
             filteredLocations = filter.process();
+            System.out.println("After " + filter.getClass().getSimpleName() + ": " + filteredLocations.size());
         }
 
         return filteredLocations;

@@ -23,7 +23,6 @@ public class DataFilter {
     }
 
     public List<LocationCell> filterLocations() {
-    	System.out.println(allCells.size());
         return filterManager.applyFilters(allCells);
     }
 }

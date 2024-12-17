@@ -138,19 +138,19 @@ public class BoundingBoxFilter implements Filter {
         JPanel panel = new JPanel(new GridLayout(0, 2));
         
         panel.add(new JLabel("Min Latitude:"));
-        JTextField minLatField = new JTextField("37.7749");
+        JTextField minLatField = new JTextField("33.5");
         panel.add(minLatField);
         
         panel.add(new JLabel("Max Latitude:"));
-        JTextField maxLatField = new JTextField("37.8049");
+        JTextField maxLatField = new JTextField("34.2");
         panel.add(maxLatField);
         
         panel.add(new JLabel("Min Longitude:"));
-        JTextField minLonField = new JTextField("-122.4194");
+        JTextField minLonField = new JTextField("-116.5");
         panel.add(minLonField);
         
         panel.add(new JLabel("Max Longitude:"));
-        JTextField maxLonField = new JTextField("-122.3994");
+        JTextField maxLonField = new JTextField("-115");
         panel.add(maxLonField);
 
         panel.putClientProperty("fields", new JTextField[]{minLatField, maxLatField, minLonField, maxLonField});

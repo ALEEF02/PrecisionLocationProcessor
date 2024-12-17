@@ -2,3 +2,5 @@
 **/*.bkp
 /bin/
 /target/
+/data/
+*.kml
