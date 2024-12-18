@@ -1,12 +1,16 @@
 package plp.filters;
 
 import java.awt.GridLayout;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.io.FileInputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -27,18 +31,58 @@ public class LightPollutionFilter implements Filter {
     private double minSQM;
     private List<LocationCell> locations;
     private static final String TILE_PATH = "data/lightpollution/binary_tiles/2022/";
-    private final Map<String, byte[]> tileDataCache = new HashMap<>(); // Cache for decompressed tiles
+    private static final String TILE_URL_BASE = "https://github.com/djlorenz/djlorenz.github.io/raw/refs/heads/master/astronomy/binary_tiles/2022/";
+    private static final Map<String, byte[]> tileDataCache = new HashMap<>(); // Cache for decompressed tiles
     private static final int TILE_SIZE = 600; 
 
     public LightPollutionFilter() {
     	LocationUtils.initialize();
+    	ensureLightPollutionTilesExist();
     	preloadTiles();
+    }
+    
+    /**
+     * Ensures the light pollution tiles are downloaded and available in TILE_PATH.
+     */
+    private void ensureLightPollutionTilesExist() {
+        File tileDirectory = new File(TILE_PATH);
+        if (!tileDirectory.exists() || tileDirectory.list().length == 0) {
+            System.out.println("Light pollution tiles not found. Downloading...");
+            tileDirectory.mkdirs();
+            downloadLightPollutionTiles();
+        }
+    }
+
+    /**
+     * Downloads light pollution tiles from the specified GitHub URL and saves them locally.
+     */
+    private void downloadLightPollutionTiles() {
+        try {
+            for (int x = 1; x <= 72; x++) { // 72 tiles in longitude (5 degrees each)
+                for (int y = 1; y <= 28; y++) { // 28 tiles in latitude
+                    String fileName = "binary_tile_" + x + "_" + y + ".dat.gz";
+                    URL fileUrl = new URI(TILE_URL_BASE + fileName).toURL();
+                    Path localFilePath = Path.of(TILE_PATH, fileName);
+
+                    System.out.println("Downloading: " + fileUrl);
+                    try (InputStream in = fileUrl.openStream()) {
+                        Files.copy(in, localFilePath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+            System.out.println("Light pollution data downloaded successfully.");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to download light pollution tiles: " + e.getMessage(), e);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Failed to download light pollution tiles: " + e.getMessage(), e);
+		}
     }
     
     /**
      * Preloads all binary tiles into memory to optimize access.
      */
-    private void preloadTiles() {
+    private static void preloadTiles() {
+    	if (!tileDataCache.isEmpty()) return;
         File dir = new File(TILE_PATH);
         File[] files = dir.listFiles((d, name) -> name.endsWith(".dat.gz"));
         if (files == null) {
@@ -58,7 +102,7 @@ public class LightPollutionFilter implements Filter {
     /**
      * Decompresses a GZIP file and returns its byte data.
      */
-    private byte[] decompressTile(File file) throws IOException {
+    private static byte[] decompressTile(File file) throws IOException {
         try (InputStream fileStream = new FileInputStream(file);
              GZIPInputStream gzipStream = new GZIPInputStream(fileStream);
              ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
@@ -83,6 +127,7 @@ public class LightPollutionFilter implements Filter {
     public void setRequirements(Object requirements) throws IllegalArgumentException {
         if (requirements instanceof Double) {
             this.minSQM = (Double) requirements;
+            System.out.println(this.minSQM);
         } else {
             throw new IllegalArgumentException("Invalid requirement type for LightPollutionFilter");
         }
@@ -105,7 +150,7 @@ public class LightPollutionFilter implements Filter {
     public JPanel getParameterPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 2));
         panel.add(new JLabel("Min SQM:"));
-        JTextField minSQMField = new JTextField("21.92");
+        JTextField minSQMField = new JTextField(minSQM == 0.0 ? "21.92" : String.valueOf(minSQM));
         panel.add(minSQMField);
         panel.putClientProperty("fields", new JTextField[]{minSQMField});
         return panel;

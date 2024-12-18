@@ -21,4 +21,10 @@ public class OperatorFactory {
     public static List<LocationCell> applyIntersect(List<LocationCell> list1, List<LocationCell> list2) {
         return applyAnd(list1, list2);
     }
+    
+    public static List<LocationCell> applyNot(List<LocationCell> list1, List<LocationCell> list2) {
+        return list1.stream()
+                .filter(cell -> !list2.contains(cell))
+                .toList();
+    }
 }

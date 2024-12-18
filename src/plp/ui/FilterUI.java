@@ -5,14 +5,18 @@ import org.reflections.Reflections;
 import plp.filter.DataFilter;
 import plp.filter.Filter;
 import plp.filters.BoundingBoxFilter;
+import plp.filters.OperatorFilter;
 import plp.location.LocationCell;
+import plp.operator.LogicalOperator;
 import plp.output.KMLGenerator;
 
 import javax.swing.*;
 import java.awt.*;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * FilterUI - A dynamic UI for managing and configuring filters.
@@ -35,11 +39,11 @@ public class FilterUI extends JFrame {
     private ArrayList<Filter> addedFilters;
     private Map<String, Filter> availableFilters;
 
-    public FilterUI() {
-        super("Location Filter System");
+    public FilterUI() throws Exception {
+        super("PrecisionLocationProcessor");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setSize(600, 400);
+        setSize(800, 600);
 
         loadAvailableFilters(); // Load all filters dynamically
 
@@ -52,12 +56,14 @@ public class FilterUI extends JFrame {
 
         JButton addButton = new JButton("Add Filter");
         JButton runButton = new JButton("Run Filters");
+        JButton addCompositeButton = new JButton("Add Composite Filter"); // Button to add composite filters
 
         // Layout: Top Panel - Filter Selection
         JPanel topPanel = new JPanel();
         topPanel.add(new JLabel("Select Filter:"));
         topPanel.add(filterSelectionBox);
         topPanel.add(addButton);
+        topPanel.add(addCompositeButton);
         
         // Layout: Center Panel - Parameter input and filter list
         add(topPanel, BorderLayout.NORTH);
@@ -65,8 +71,23 @@ public class FilterUI extends JFrame {
         add(new JScrollPane(filterList), BorderLayout.EAST);
         add(runButton, BorderLayout.SOUTH);
     	
-        filterSelectionBox.addActionListener(e -> updateParameterPanel()); // Load parameter panel dynamically
-        addButton.addActionListener(e -> addFilter()); // Add filter to the list
+        filterSelectionBox.addActionListener(e -> {
+			try {
+				updateParameterPanel();
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}); // Load parameter panel dynamically
+        addButton.addActionListener(e -> {
+			try {
+				addFilter();
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}); // Add filter to the list
+        addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
         runButton.addActionListener(e -> runFilters()); // Execute pipeline and generate KML
 
         updateParameterPanel(); // Initialize with the first filter's parameters
@@ -83,6 +104,7 @@ public class FilterUI extends JFrame {
 
         for (Class<? extends Filter> filterClass : classes) {
             try {
+            	if (filterClass.equals(OperatorFilter.class)) continue;
                 if (!Modifier.isAbstract(filterClass.getModifiers())) {
                     Filter filter = filterClass.getDeclaredConstructor().newInstance();
                     availableFilters.put(filterClass.getSimpleName(), filter);
@@ -96,11 +118,17 @@ public class FilterUI extends JFrame {
     /**
      * Updates the parameter input panel to match the selected filter.
      * This dynamically renders the input fields defined by the selected filter.
+     * @throws SecurityException 
+     * @throws NoSuchMethodException 
+     * @throws InvocationTargetException 
+     * @throws IllegalArgumentException 
+     * @throws IllegalAccessException 
+     * @throws InstantiationException 
      */
-    private void updateParameterPanel() {
+    private void updateParameterPanel() throws Exception {
         parameterPanel.removeAll(); // Clear existing components
         String selectedFilter = (String) filterSelectionBox.getSelectedItem();
-        Filter filter = availableFilters.get(selectedFilter);
+        Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
         if (filter != null) {
             parameterPanel.add(filter.getParameterPanel()); // Add the filter's parameter UI
         }
@@ -111,12 +139,18 @@ public class FilterUI extends JFrame {
     /**
      * Adds a filter instance with user-specified parameters to the pipeline.
      * Validates user input and displays the filter in the configured filter list.
+     * @throws SecurityException 
+     * @throws NoSuchMethodException 
+     * @throws InvocationTargetException 
+     * @throws IllegalArgumentException 
+     * @throws IllegalAccessException 
+     * @throws InstantiationException 
      * 
      */
-    private void addFilter() {
+    private void addFilter() throws Exception {
     		
         String selectedFilter = (String) filterSelectionBox.getSelectedItem();
-        Filter filter = availableFilters.get(selectedFilter);
+        Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
 
         if (filter != null) {
             try {
@@ -129,6 +163,137 @@ public class FilterUI extends JFrame {
             }
         }
     }
+    
+    /**
+     * Adds a composite filter with logical operators and sub-filters.
+     * Allows the user to set parameters for sub-filters dynamically.
+     */
+    private void addCompositeFilter() {
+        createCompositeFilter().thenAccept(compositeFilter -> {
+            if (compositeFilter != null) {
+                addedFilters.add(compositeFilter);
+                filterListModel.addElement("Composite Filter: " + compositeFilter.getRequirements());
+            }
+        }).exceptionally(ex -> {
+            ex.printStackTrace(); // Log errors
+            return null;
+        });
+    }
+    
+    /**
+     * Adds a composite filter with logical operators and sub-filters.
+     * Allows the user to set parameters for sub-filters dynamically.
+     */
+    private CompletableFuture<OperatorFilter> createCompositeFilter() {
+    	
+        CompletableFuture<OperatorFilter> future = new CompletableFuture<>();
+        
+        // Create a dialog to select sub-filters and operators
+    	JFrame dialog = new JFrame("Create Composite Filter");
+        dialog.setSize(700, 400);
+        dialog.setLayout(new BorderLayout());
+        dialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        DefaultListModel<String> selectedFiltersModel = new DefaultListModel<>();
+
+        // Get operators dynamically from LogicalOperator enum
+        JComboBox<String> operatorBox = new JComboBox<>(Arrays.stream(LogicalOperator.values())
+                .map(Enum::name).toArray(String[]::new));
+
+        JPanel parameterContainer = new JPanel();
+        parameterContainer.setLayout(new BoxLayout(parameterContainer, BoxLayout.Y_AXIS));
+
+        JButton addSubFilterButton = new JButton("Add Sub-Filter");
+        addSubFilterButton.addActionListener(e -> {
+        	try {
+	            String selectedFilter = (String) filterSelectionBox.getSelectedItem();
+	            selectedFiltersModel.addElement(selectedFilter);
+	            Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
+	            if (filter != null) {
+	                JPanel subFilterPanel = filter.getParameterPanel();
+	                subFilterPanel.setBorder(BorderFactory.createTitledBorder(selectedFilter));
+	                parameterContainer.add(subFilterPanel);
+	                parameterContainer.revalidate();
+	                parameterContainer.repaint();
+	            }
+        	} catch (Exception ex) {
+        		JOptionPane.showMessageDialog(this, "Exception Adding new sub-filter: " + ex.getMessage());
+        	}
+        });
+        
+        JButton addNestedCompositeButton = new JButton("Add Nested Composite Filter");
+        addNestedCompositeButton.addActionListener(e -> {
+        	createCompositeFilter().thenAccept(nestedComposite -> {
+                if (nestedComposite != null) {
+                    selectedFiltersModel.addElement("Nested Composite Filter (" + nestedComposite.getOperator().toString() + ")");
+                    JPanel nestedPanel = nestedComposite.getParameterPanel();
+                    nestedPanel.setBorder(BorderFactory.createTitledBorder("Nested Composite Filter"));
+                    nestedPanel.putClientProperty("filter", nestedComposite);
+                    parameterContainer.add(nestedPanel);
+                    parameterContainer.revalidate();
+                    parameterContainer.repaint();
+                }
+            });
+        });
+        
+        JButton createButton = new JButton("Create Composite Filter");
+        createButton.addActionListener(e -> {
+            String operator = (String) operatorBox.getSelectedItem();
+            OperatorFilter compositeFilter = new OperatorFilter();
+            compositeFilter.setRequirements(LogicalOperator.valueOf(operator));
+
+            for (Component component : parameterContainer.getComponents()) {
+                if (component instanceof JPanel panel) {
+                    Object filterProperty = panel.getClientProperty("filter");
+
+                    if (filterProperty instanceof OperatorFilter nestedComposite) {
+                        compositeFilter.addFilter(nestedComposite);
+                    } else {
+                    	try {
+	                        String filterName = selectedFiltersModel.getElementAt(parameterContainer.getComponentZOrder(panel));
+	                        Filter subFilter = availableFilters.get(filterName).getClass().getDeclaredConstructor().newInstance();
+	
+	                        if (subFilter != null) {
+	                            try {
+	                                subFilter.setRequirements(panel);
+	                                compositeFilter.addFilter(subFilter);
+	                            } catch (Exception ex) {
+	                                JOptionPane.showMessageDialog(this, "Invalid input for sub-filter " + filterName + ": " + ex.getMessage());
+	                                future.completeExceptionally(ex); // Handle exceptions
+	                                return;
+	                            }
+	                        }
+                    	} catch (Exception ex) {
+                            JOptionPane.showMessageDialog(this, "Exception creating composite filter: " + ex.getMessage());
+                    	}
+                    }
+	            }
+            }
+
+            future.complete(compositeFilter); // Complete the future
+            dialog.dispose();
+        });
+
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> {
+            future.complete(null); // Signal cancellation
+            dialog.dispose();
+        });
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(addSubFilterButton);
+        buttonPanel.add(addNestedCompositeButton);
+        buttonPanel.add(createButton);
+        buttonPanel.add(cancelButton);
+
+        dialog.add(operatorBox, BorderLayout.NORTH);
+        dialog.add(new JScrollPane(parameterContainer), BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+        return future; // Return the constructed composite filter
+    }
+        
 
     /**
      * Executes the filter pipeline, applies all configured filters, and generates a KML file.
@@ -167,7 +332,14 @@ public class FilterUI extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new FilterUI().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+			try {
+				new FilterUI().setVisible(true);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		});
     }
 }
 
