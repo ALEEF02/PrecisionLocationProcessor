@@ -217,7 +217,7 @@ public class LightPollutionFilter implements Filter {
         int compressed = firstNumber + change;
         
         // Ensure compressed value is valid
-        if (compressed <= 0) {
+        if (compressed < 0) {
             throw new RuntimeException("Invalid compressed value: " + compressed);
         }
         

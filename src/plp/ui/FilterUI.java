@@ -57,6 +57,7 @@ public class FilterUI extends JFrame {
         JButton addButton = new JButton("Add Filter");
         JButton runButton = new JButton("Run Filters");
         JButton addCompositeButton = new JButton("Add Composite Filter"); // Button to add composite filters
+        JButton removeButton = new JButton("Remove Filter");
 
         // Layout: Top Panel - Filter Selection
         JPanel topPanel = new JPanel();
@@ -64,6 +65,7 @@ public class FilterUI extends JFrame {
         topPanel.add(filterSelectionBox);
         topPanel.add(addButton);
         topPanel.add(addCompositeButton);
+        topPanel.add(removeButton);
         
         // Layout: Center Panel - Parameter input and filter list
         add(topPanel, BorderLayout.NORTH);
@@ -79,6 +81,7 @@ public class FilterUI extends JFrame {
 				e1.printStackTrace();
 			}
 		}); // Load parameter panel dynamically
+        
         addButton.addActionListener(e -> {
 			try {
 				addFilter();
@@ -87,6 +90,17 @@ public class FilterUI extends JFrame {
 				e1.printStackTrace();
 			}
 		}); // Add filter to the list
+
+        removeButton.addActionListener(e -> {
+            int selectedIndex = filterList.getSelectedIndex();
+            if (selectedIndex != -1) {
+                filterListModel.remove(selectedIndex);
+                addedFilters.remove(selectedIndex);
+            } else {
+                JOptionPane.showMessageDialog(this, "No filter selected to remove.");
+            }
+        });
+        
         addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
         runButton.addActionListener(e -> runFilters()); // Execute pipeline and generate KML
 
@@ -172,7 +186,7 @@ public class FilterUI extends JFrame {
         createCompositeFilter().thenAccept(compositeFilter -> {
             if (compositeFilter != null) {
                 addedFilters.add(compositeFilter);
-                filterListModel.addElement("Composite Filter: " + compositeFilter.getRequirements());
+                filterListModel.addElement(compositeFilter.getRequirements());
             }
         }).exceptionally(ex -> {
             ex.printStackTrace(); // Log errors

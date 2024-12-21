@@ -13,13 +13,13 @@ public class SystemRunner {
 
         // Create Filters
         LightPollutionFilter lightPollutionFilter = new LightPollutionFilter();
-        lightPollutionFilter.setRequirements(18.1); // Minimum SQM value
+        lightPollutionFilter.setRequirements(21.65); // Minimum SQM value
         
-        LightPollutionFilter lightPollutionFilter2 = new LightPollutionFilter();
-        lightPollutionFilter2.setRequirements(17.9); // Minimum SQM value
+        LightPollutionFilter lightPollutionFilterNot = new LightPollutionFilter();
+        lightPollutionFilterNot.setRequirements(21.6); // Minimum SQM value
 
         BoundingBoxFilter boundingBoxFilter = new BoundingBoxFilter();
-        boundingBoxFilter.setRequirements(new double[]{37.7749, 37.8049, -122.4194, -122.3994}); // San Francisco bounding box
+        boundingBoxFilter.setRequirements(new double[]{33.5, 34.2, -116.5, -115.0}); // Desert bounding box
 
         // Use DataFilter
         DataFilter dataFilter = new DataFilter(boundingBoxFilter);
@@ -27,7 +27,7 @@ public class SystemRunner {
         // SQM less than 17.9
         OperatorFilter notFilter = new OperatorFilter();
         notFilter.setRequirements(LogicalOperator.NOT);
-        notFilter.addFilter(lightPollutionFilter2);
+        notFilter.addFilter(lightPollutionFilterNot);
         
         // SQM less than 17.9 or greater than 18.1
         OperatorFilter orFilter = new OperatorFilter();

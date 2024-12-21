@@ -42,7 +42,7 @@ public class KMLGenerator {
                 List<List<LatLng>> holes = entry.getValue();
 
                 Placemark placemark = document.createAndAddPlacemark().withName(String.valueOf(outerRing.getFirst()));
-                placemark.createAndAddStyle().createAndSetPolyStyle().withColor("ff0000ff"); // Red color in KML (ABGR format)
+                placemark.createAndAddStyle().createAndSetPolyStyle().withColor("aa0000ff"); // Red color in KML (ABGR format)
                 Polygon polygon = placemark.createAndSetPolygon();
 
                 // Add outer boundary
