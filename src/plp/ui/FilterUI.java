@@ -241,7 +241,7 @@ public class FilterUI extends JFrame {
                 if (nestedComposite != null) {
                     selectedFiltersModel.addElement("Nested Composite Filter (" + nestedComposite.getOperator().toString() + ")");
                     JPanel nestedPanel = nestedComposite.getParameterPanel();
-                    nestedPanel.setBorder(BorderFactory.createTitledBorder("Nested Composite Filter"));
+                    nestedPanel.setBorder(BorderFactory.createTitledBorder("Nested Composite Filter (" + nestedComposite.getOperator().toString() + ")"));
                     nestedPanel.putClientProperty("filter", nestedComposite);
                     parameterContainer.add(nestedPanel);
                     parameterContainer.revalidate();

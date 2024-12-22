@@ -29,7 +29,7 @@ public class SunWeatherFilter implements Filter {
     private static final Map<String, BufferedImage> sunriseImages = new HashMap<>();
     private static final Map<String, BufferedImage> sunsetImages = new HashMap<>();
     private SunType selectedSunType;
-    private int percentage;
+    private int percentage = -1;
     
     static {
         try {
@@ -115,11 +115,12 @@ public class SunWeatherFilter implements Filter {
 
         JLabel sunTypeLabel = new JLabel("Sun Event:");
         JComboBox<SunType> sunTypeComboBox = new JComboBox<>(SunType.values());
+        if (selectedSunType != null) {sunTypeComboBox.setSelectedItem(selectedSunType);}
         panel.add(sunTypeLabel);
         panel.add(sunTypeComboBox);
 
         JLabel percentageLabel = new JLabel("Minimum Quality Percentage:");
-        JSlider percentageSlider = new JSlider(0, 100, 50);
+        JSlider percentageSlider = new JSlider(0, 100, percentage == -1 ? 50 : percentage);
         percentageSlider.setMajorTickSpacing(20);
         percentageSlider.setPaintTicks(true);
         percentageSlider.setPaintLabels(true);

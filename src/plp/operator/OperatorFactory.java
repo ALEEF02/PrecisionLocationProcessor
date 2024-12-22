@@ -27,4 +27,16 @@ public class OperatorFactory {
                 .filter(cell -> !list2.contains(cell))
                 .toList();
     }
+    
+    public static List<LocationCell> applyExclusiveOr(List<LocationCell> list1, List<LocationCell> list2) {
+        Set<LocationCell> resultSet = new HashSet<>(list1);
+        resultSet.addAll(list2);
+
+        Set<LocationCell> intersection = new HashSet<>(list1);
+        intersection.retainAll(list2);
+
+        resultSet.removeAll(intersection);
+
+        return new ArrayList<>(resultSet);
+    }
 }

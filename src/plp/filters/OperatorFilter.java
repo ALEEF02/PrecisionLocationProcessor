@@ -48,6 +48,7 @@ public class OperatorFilter implements Filter {
         switch (operator) {
 	        case OR -> result = new ArrayList<LocationCell>();
 	        case NOT -> result = locations;
+	        case XOR -> result = new ArrayList<LocationCell>();
 	        default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
 	    }
 
@@ -57,6 +58,7 @@ public class OperatorFilter implements Filter {
             switch (operator) {
                 case OR -> result = OperatorFactory.applyOr(result, nextResult);
                 case NOT -> result = OperatorFactory.applyNot(locations, nextResult);
+                case XOR -> result = OperatorFactory.applyExclusiveOr(result, nextResult);
                 default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
             }
         }
