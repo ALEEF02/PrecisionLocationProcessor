@@ -1,12 +1,11 @@
 package plp.filters;
 
 import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.plaf.basic.BasicSliderUI;
 
 import com.uber.h3core.util.LatLng;
 
@@ -28,6 +28,11 @@ public class SunWeatherFilter implements Filter {
     private List<LocationCell> locations;
     private static final Map<String, BufferedImage> sunriseImages = new HashMap<>();
     private static final Map<String, BufferedImage> sunsetImages = new HashMap<>();
+    private static final Map<Color, Integer> sunriseColorToPercentageCache = new HashMap<>();
+    private static final Map<Color, Integer> sunsetColorToPercentageCache = new HashMap<>();
+    private static final int barEnd = 197;
+    private static final int barStart = 886;
+    private Map<Integer, Map<Integer, Color>> colorCache = new HashMap<>();
     private SunType selectedSunType;
     private int percentage = -1;
     
@@ -44,6 +49,23 @@ public class SunWeatherFilter implements Filter {
             sunsetImages.put("MT", ImageIO.read(new URI("https://sunsetwx.com/sunset/sunset_mt.png").toURL()));
             sunsetImages.put("CT", ImageIO.read(new URI("https://sunsetwx.com/sunset/sunset_ct.png").toURL()));
             sunsetImages.put("ET", ImageIO.read(new URI("https://sunsetwx.com/sunset/sunset_et.png").toURL()));
+            
+            // Create color to percentage maps
+            BufferedImage referenceImage = sunriseImages.get("ET"); // Assuming all color bars are the same
+            for (int y = barStart; y >= barEnd; y--) {
+                Color barColor = new Color(referenceImage.getRGB(1350, y));
+                int percentage = (int) ((double) (y-barStart) / (barEnd-barStart) * 100);
+                sunriseColorToPercentageCache.put(barColor, percentage);
+            }
+
+            referenceImage = sunsetImages.get("ET"); // Assuming all color bars are the same
+            for (int y = barStart; y >= barEnd; y--) {
+                Color barColor = new Color(referenceImage.getRGB(1350, y));
+                int percentage = (int) ((double) (y-barStart) / (barEnd-barStart) * 100);
+                sunsetColorToPercentageCache.put(barColor, percentage);
+            }
+            System.out.println(sunsetColorToPercentageCache);
+            
         } catch (Exception e) {
             throw new RuntimeException("Failed to preload weather images: " + e.getMessage(), e);
         }
@@ -63,6 +85,7 @@ public class SunWeatherFilter implements Filter {
 
 	@Override
 	public List<LocationCell> process() {
+		colorCache = new HashMap<>();
 		return locations.stream()
                 .filter(cell -> getPercentageFromColor(getColorAt(LocationUtils.getLatLng(cell))) >= percentage)
                 .toList();
@@ -120,13 +143,20 @@ public class SunWeatherFilter implements Filter {
         panel.add(sunTypeComboBox);
 
         JLabel percentageLabel = new JLabel("Minimum Quality Percentage:");
-        JSlider percentageSlider = new JSlider(0, 100, percentage == -1 ? 50 : percentage);
+        ColorBarSlider percentageSlider = new ColorBarSlider(0, 100, percentage == -1 ? 50 : percentage);
         percentageSlider.setMajorTickSpacing(20);
         percentageSlider.setPaintTicks(true);
         percentageSlider.setPaintLabels(true);
+        percentageSlider.setSunType(selectedSunType);
+        
+        sunTypeComboBox.addActionListener(e -> {
+            selectedSunType = (SunType) sunTypeComboBox.getSelectedItem();
+            percentageSlider.setSunType(selectedSunType);
+        });
+
         panel.add(percentageLabel);
         panel.add(percentageSlider);
-
+        
         panel.putClientProperty("sunTypeComboBox", sunTypeComboBox);
         panel.putClientProperty("percentageSlider", percentageSlider);
 
@@ -166,20 +196,69 @@ public class SunWeatherFilter implements Filter {
         return getColorAt(weatherImage, x, y);
     }
 	
-	/**
+    /**
      * Gets the color of the weather image at the specified coordinates.
-     * 
+     *
      * @param image The BufferedImage to analyze.
      * @param x The x-coordinate of the pixel.
      * @param y The y-coordinate of the pixel.
-     * @return The Color of the pixel at the given coordinates.
+     * @return The Color of the pixel at the given coordinates, adjusted for border effects.
      */
     private Color getColorAt(BufferedImage image, int x, int y) {
         if (image == null) {
             throw new IllegalStateException("Weather image not initialized.");
         }
+        if (colorCache.containsKey(x) && colorCache.get(x).containsKey(y)) {
+        	return colorCache.get(x).get(y);
+        }
         int rgb = image.getRGB(x, y);
-        return new Color(rgb);
+        Color color = new Color(rgb);
+
+        // Adjust for potential border dithering
+        if (!isOnCurrentColorbar(color)) {
+            color = adjustForBorder(image, x, y);
+        }
+
+        colorCache.putIfAbsent(x, new HashMap<Integer, Color>());
+        colorCache.get(x).put(y, color);
+        return color;
+    }
+
+    /**
+     * Adjusts the color by averaging nearby pixels to mitigate border effects.
+     *
+     * @param image The image being analyzed.
+     * @param x The x-coordinate of the pixel.
+     * @param y The y-coordinate of the pixel.
+     * @return The adjusted color.
+     */
+    private Color adjustForBorder(BufferedImage image, int x, int y) {
+    	System.out.println("Adjusting for border at " + x + ", " + y);
+        int sampleRadius = 1; // Check neighboring pixels within this radius
+        int r = 0, g = 0, b = 0, count = 0;
+
+        for (int dx = -sampleRadius; dx <= sampleRadius; dx++) {
+            for (int dy = -sampleRadius; dy <= sampleRadius; dy++) {
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx >= 0 && nx < image.getWidth() && ny >= 0 && ny < image.getHeight()) {
+                    Color neighborColor = new Color(image.getRGB(nx, ny));
+                    if (isOnCurrentColorbar(neighborColor)) { // Only use valid colors
+                        r += neighborColor.getRed();
+                        g += neighborColor.getGreen();
+                        b += neighborColor.getBlue();
+                        count++;
+                    }
+                }
+            }
+        }
+
+        if (count > 0) {
+            return new Color(r / count, g / count, b / count);
+        } else {
+            return new Color(0, 0, 0); // Fallback to black if all neighbors are borders
+        }
     }
     
     /**
@@ -190,8 +269,21 @@ public class SunWeatherFilter implements Filter {
      * @return The corresponding percentage (0–100).
      */
     private int getPercentageFromColor(Color inputColor) {
+    	
+    	// Check cache for exact match first
+        if (selectedSunType == SunType.Sunrise) {
+	        if (sunriseColorToPercentageCache.containsKey(inputColor)) {
+	            return sunriseColorToPercentageCache.get(inputColor);
+	        }
+        } else {
+	        if (sunsetColorToPercentageCache.containsKey(inputColor)) {
+	            return sunsetColorToPercentageCache.get(inputColor);
+	        }
+        }
+        
+        // Fallback
         BufferedImage referenceImage = selectedSunType == SunType.Sunrise ? sunriseImages.get("ET") : sunsetImages.get("ET");
-
+        
         int barEnd = 197;
         int barStart = 886;
         int closestY = -1;
@@ -208,6 +300,28 @@ public class SunWeatherFilter implements Filter {
         }
 
         return (int) ((double) (closestY-barStart) / (barEnd-barStart) * 100);
+    }
+    
+    /**
+     * Determine if the current color is one from the colorbar.
+     *
+     * @param inputColor The input color to check.
+     * @return Whether the color has a perfect match.
+     */
+    private boolean isOnCurrentColorbar(Color inputColor) {
+    	
+    	// Check cache for exact match first
+        if (selectedSunType == SunType.Sunrise) {
+	        if (sunriseColorToPercentageCache.containsKey(inputColor)) {
+	            return true;
+	        }
+        } else {
+	        if (sunsetColorToPercentageCache.containsKey(inputColor)) {
+	            return true;
+	        }
+        }
+
+        return false;
     }
 
     /**
@@ -247,5 +361,50 @@ public class SunWeatherFilter implements Filter {
 
     enum SunType {
     	Sunrise, Sunset
+    }
+    
+    /**
+     * Custom JSlider to display the color bar as its background.
+     */
+    public static class ColorBarSlider extends JSlider {
+        private SunType sunType;
+        static final int barEnd = 197; // From sunsetwx image
+        static final int barStart = 886; // From sunsetwx image
+        
+        public ColorBarSlider(int min, int max, int value) {
+            super(min, max, value);
+            setUI(new ColorBarSliderUI(this));
+        }
+
+        public void setSunType(SunType sunType) {
+            this.sunType = sunType;
+            repaint();
+        }
+
+        private static class ColorBarSliderUI extends BasicSliderUI {
+            public ColorBarSliderUI(JSlider b) {
+                super(b);
+            }
+
+            @Override
+            public void paintTrack(Graphics grphcs) {
+                Graphics2D g2 = (Graphics2D) grphcs.create();
+                BufferedImage referenceImage = ((ColorBarSlider) slider).sunType == SunType.Sunset
+                		? sunsetImages.get("ET") : sunriseImages.get("ET");
+
+                if (referenceImage != null) {
+                    int trackWidth = trackRect.width;
+                    int trackHeight = trackRect.height;
+                    int trackStart = trackRect.x;
+                    int trackEnd = trackStart + trackRect.width;
+                    for (int x = trackStart; x < trackEnd; x++) {
+                    	Color barColor = new Color(referenceImage.getRGB(1350, (int)(barStart - (((x-trackStart)*1.0 / trackWidth) * (barStart - barEnd)) )));
+                        g2.setColor(barColor);
+                        g2.fillRect(x, 0, 1, trackHeight);
+                    }
+                }
+                g2.dispose();
+            }
+        }
     }
 }
