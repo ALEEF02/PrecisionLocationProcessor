@@ -64,7 +64,6 @@ public class SunWeatherFilter implements Filter {
                 int percentage = (int) ((double) (y-barStart) / (barEnd-barStart) * 100);
                 sunsetColorToPercentageCache.put(barColor, percentage);
             }
-            System.out.println(sunsetColorToPercentageCache);
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to preload weather images: " + e.getMessage(), e);
@@ -233,7 +232,6 @@ public class SunWeatherFilter implements Filter {
      * @return The adjusted color.
      */
     private Color adjustForBorder(BufferedImage image, int x, int y) {
-    	System.out.println("Adjusting for border at " + x + ", " + y);
         int sampleRadius = 1; // Check neighboring pixels within this radius
         int r = 0, g = 0, b = 0, count = 0;
 

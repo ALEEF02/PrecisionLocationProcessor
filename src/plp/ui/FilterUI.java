@@ -44,10 +44,36 @@ public class FilterUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         setSize(800, 600);
+        
+     // Progress bar setup
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setStringPainted(true);
+        progressBar.setString("Loading filters...");
+        add(progressBar, BorderLayout.SOUTH);
 
-        loadAvailableFilters(); // Load all filters dynamically
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                loadAvailableFilters(progressBar); // Load all filters dynamically
+                return null;
+            }
 
-        // UI Components
+            @Override
+            protected void done() {
+                remove(progressBar);
+                initializeUIComponents();
+                revalidate();
+                repaint();
+            }
+        };
+
+        worker.execute();
+
+        
+    }
+    
+    private void initializeUIComponents() {
+    	// UI Components
         filterSelectionBox = new JComboBox<>(availableFilters.keySet().toArray(new String[0]));
         parameterPanel = new JPanel();
         filterListModel = new DefaultListModel<>();
@@ -104,29 +130,44 @@ public class FilterUI extends JFrame {
         addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
         runButton.addActionListener(e -> runFilters()); // Execute pipeline and generate KML
 
-        updateParameterPanel(); // Initialize with the first filter's parameters
+        try {
+			updateParameterPanel();
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} // Initialize with the first filter's parameters
     }
 
     /**
      * Dynamically loads all classes in the "filters" package that implement the Filter interface.
      * Populates the availableFilters map with filter names and instances.
      */
-    private void loadAvailableFilters() {
+    private void loadAvailableFilters(JProgressBar progressBar) {
         availableFilters = new HashMap<>();
         Reflections reflections = new Reflections("plp.filters");
         Set<Class<? extends Filter>> classes = reflections.getSubTypesOf(Filter.class);
+        classes.removeIf(filterClass -> filterClass.equals(OperatorFilter.class) || Modifier.isAbstract(filterClass.getModifiers()));
+
+        int totalClasses = classes.size();
+        int progress = 0;
 
         for (Class<? extends Filter> filterClass : classes) {
+            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " – " + filterClass.getSimpleName());
             try {
-            	if (filterClass.equals(OperatorFilter.class)) continue;
-                if (!Modifier.isAbstract(filterClass.getModifiers())) {
-                    Filter filter = filterClass.getDeclaredConstructor().newInstance();
-                    availableFilters.put(filterClass.getSimpleName(), filter);
-                }
+                Filter filter = filterClass.getDeclaredConstructor().newInstance();
+                availableFilters.put(filterClass.getSimpleName(), filter);
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            progress++;
+            int progressPercentage = (int) ((progress / (double) totalClasses) * 100);
+            progressBar.setValue(progressPercentage);
         }
+
+        progressBar.setIndeterminate(false);
+        progressBar.setValue(100);
+        progressBar.setString("Filters loaded.");
     }
 
     /**
