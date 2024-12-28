@@ -4,7 +4,7 @@ import org.reflections.Reflections;
 
 import plp.filter.DataFilter;
 import plp.filter.Filter;
-import plp.filters.BoundingBoxFilter;
+import plp.filter.InitialFilter;
 import plp.filters.OperatorFilter;
 import plp.location.LocationCell;
 import plp.operator.LogicalOperator;
@@ -356,19 +356,19 @@ public class FilterUI extends JFrame {
      */
     private void runFilters() {
     	DataFilter dataFilter = null;
-    	BoundingBoxFilter initialBounds = null;
+    	InitialFilter initialBounds = null;
 
-        // Find the first BoundingBoxFilter in the list
+        // Find the first InitialFilter in the list
         for (Filter filter : addedFilters) {
-            if (filter instanceof BoundingBoxFilter) {
-            	initialBounds = (BoundingBoxFilter) filter;
+            if (filter instanceof InitialFilter) {
+            	initialBounds = (InitialFilter) filter;
                 dataFilter = new DataFilter(initialBounds);
                 break;
             }
         }
 
         if (dataFilter == null) {
-            JOptionPane.showMessageDialog(this, "Error: A BoundingBoxFilter is required to start the pipeline.",
+            JOptionPane.showMessageDialog(this, "Error: An InitialFilter is required to start the pipeline.",
                     "Missing BoundingBoxFilter", JOptionPane.ERROR_MESSAGE);
             return;
         }

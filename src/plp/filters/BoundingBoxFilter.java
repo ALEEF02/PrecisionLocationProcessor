@@ -14,10 +14,10 @@ import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
 
 import plp.Config;
-import plp.filter.Filter;
+import plp.filter.InitialFilter;
 import plp.location.LocationCell;
 
-public class BoundingBoxFilter implements Filter {
+public class BoundingBoxFilter implements InitialFilter {
     private double minLatitude;
     private double maxLatitude;
     private double minLongitude;

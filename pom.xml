@@ -10,6 +10,14 @@
 		<slf4j.version>2.0.16</slf4j.version>
 	</properties>
 	
+	<repositories>
+		<repository>
+			<id>JOSM</id>
+			<name>JOSM</name>
+			<url>https://josm.openstreetmap.de/nexus/content/repositories/releases/</url>
+		</repository>
+	</repositories>
+	
 	<dependencies>
 		<dependency>
 			<groupId>com.uber</groupId>
@@ -40,6 +48,11 @@
 		    <groupId>org.locationtech.jts</groupId>
 		    <artifactId>jts-core</artifactId>
 		    <version>1.20.0</version>
+		</dependency>
+		<dependency>
+            <groupId>org.openstreetmap.jmapviewer</groupId>
+    		<artifactId>jmapviewer</artifactId>
+    		<version>2.22</version>
 		</dependency>
 	</dependencies>
 	
