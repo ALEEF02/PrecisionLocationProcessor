@@ -1,6 +1,7 @@
 package plp.filters;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
@@ -19,6 +20,7 @@ import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
 import org.openstreetmap.gui.jmapviewer.MapPolygonImpl;
+import org.openstreetmap.gui.jmapviewer.Tile;
 import org.openstreetmap.gui.jmapviewer.interfaces.ICoordinate;
 import org.openstreetmap.gui.jmapviewer.interfaces.MapMarker;
 import org.openstreetmap.gui.jmapviewer.interfaces.MapPolygon;
@@ -30,14 +32,14 @@ import plp.Config;
 import plp.filter.InitialFilter;
 import plp.location.LocationCell;
 
-public class BoundingBoxMapFilter implements InitialFilter {
+public class BoundingPolygonFilter implements InitialFilter {
 
 	private List<LatLng> boundaryPoints;
     private List<Long> validCells;
     private List<LocationCell> locations;
     private H3Core h3;
 
-    public BoundingBoxMapFilter() {
+    public BoundingPolygonFilter() {
         try {
             h3 = H3Core.newInstance();
         } catch (IOException e) {
@@ -143,15 +145,35 @@ public class BoundingBoxMapFilter implements InitialFilter {
         private final List<MapMarker> markers;
         private MapPolygon boundingPolygon;
         private MapMarker draggedMarker;
+        
+        private boolean loaded;
+        
+        private class JMapViewerFit extends JMapViewer {
+
+            @Override
+            public void tileLoadingFinished(Tile tile, boolean success) {
+                super.tileLoadingFinished(tile, success);
+                if (!loaded & success) {
+                    loaded = true;
+                    setDisplayToFitMapElements(true, false, true);
+                }
+            }
+        }
 
         public MapPanel() {
             setLayout(new BorderLayout());
-            mapViewer = new JMapViewer();
+            mapViewer = new JMapViewerFit();
+            mapViewer.setDisplayPosition(new Coordinate(39.8283, -98.5795), 3);
+            setPreferredSize(new Dimension(400, 300));
             markers = new ArrayList<>();
+            importMarkersFromBoundaryPoints();
 
             mapViewer.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     Point clickPoint = e.getPoint();
                     draggedMarker = markers.stream()
                             .min((marker1, marker2) -> {
@@ -165,12 +187,18 @@ public class BoundingBoxMapFilter implements InitialFilter {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     draggedMarker = null; // Stop dragging
                     updateBoundingPolygon();
                 }
 
                 @Override
                 public void mouseClicked(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     if (draggedMarker == null) {
                         Point clickPoint = e.getPoint();
                         ICoordinate coord = mapViewer.getPosition(clickPoint);
@@ -185,6 +213,9 @@ public class BoundingBoxMapFilter implements InitialFilter {
             mapViewer.addMouseMotionListener(new MouseMotionAdapter() {
                 @Override
                 public void mouseDragged(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     if (draggedMarker != null) {
                         Point dragPoint = e.getPoint();
                         ICoordinate coord = mapViewer.getPosition(dragPoint);
@@ -260,6 +291,14 @@ public class BoundingBoxMapFilter implements InitialFilter {
                 boundaryPoints.add(new LatLng(marker.getLat(), marker.getLon()));
             }
             return boundaryPoints;
+        }
+        
+        private void importMarkersFromBoundaryPoints() {
+        	for (LatLng point : boundaryPoints) {
+        		markers.add(new MapMarkerDot(point.lat, point.lng));
+                mapViewer.addMapMarker(markers.getLast());
+            }
+            updateBoundingPolygon();
         }
     }
 

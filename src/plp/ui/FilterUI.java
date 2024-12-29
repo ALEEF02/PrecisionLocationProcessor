@@ -245,7 +245,7 @@ public class FilterUI extends JFrame {
         
         // Create a dialog to select sub-filters and operators
     	JFrame dialog = new JFrame("Create Composite Filter");
-        dialog.setSize(700, 400);
+        dialog.setSize(700, 800);
         dialog.setLayout(new BorderLayout());
         dialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 

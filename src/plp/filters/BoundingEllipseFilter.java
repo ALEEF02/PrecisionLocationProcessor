@@ -2,7 +2,7 @@ package plp.filters;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.FlowLayout;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
@@ -20,6 +19,7 @@ import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
 import org.openstreetmap.gui.jmapviewer.MapPolygonImpl;
+import org.openstreetmap.gui.jmapviewer.Tile;
 import org.openstreetmap.gui.jmapviewer.interfaces.ICoordinate;
 import org.openstreetmap.gui.jmapviewer.interfaces.MapMarker;
 import org.openstreetmap.gui.jmapviewer.interfaces.MapPolygon;
@@ -54,7 +54,7 @@ public class BoundingEllipseFilter implements InitialFilter {
 
     @Override
     public void setRequirements(JPanel modifiedParameterPanel) {
-        EllipseMapPanel mapPanel = (EllipseMapPanel) modifiedParameterPanel.getClientProperty("mapPanel");
+        MapPanel mapPanel = (MapPanel) modifiedParameterPanel.getClientProperty("mapPanel");
         if (mapPanel == null) {
             throw new IllegalArgumentException("Parameter panel does not contain the required map panel.");
         }
@@ -115,7 +115,8 @@ public class BoundingEllipseFilter implements InitialFilter {
                 .filter(cell -> validCells.contains(cell.getH3Index()))
                 .toList();
     }
-
+    
+    @Override
     public List<LocationCell> getValidCells() {
         return validCells.stream()
                 .map(LocationCell::new)
@@ -127,7 +128,7 @@ public class BoundingEllipseFilter implements InitialFilter {
         JPanel panel = new JPanel(new BorderLayout());
 
         // Create a map panel
-        EllipseMapPanel mapPanel = new EllipseMapPanel();
+        MapPanel mapPanel = new MapPanel();
         panel.add(mapPanel, BorderLayout.CENTER);
 
         JLabel helpLabel = new JLabel("Use right mouse button to move, mouse wheel to zoom.", SwingConstants.CENTER);
@@ -161,7 +162,7 @@ public class BoundingEllipseFilter implements InitialFilter {
         return boundary;
     }
 
-    private class EllipseMapPanel extends JPanel {
+    private class MapPanel extends JPanel {
         private final JMapViewer mapViewer;
         private MapMarkerDot centerMarker;
         private MapMarkerDot majorAxisMarker;
@@ -169,10 +170,26 @@ public class BoundingEllipseFilter implements InitialFilter {
         private MapMarkerDot rotationMarker;
         private MapPolygon ellipsePolygon;
         private MapMarkerDot selectedMarker;
+        
+        private boolean loaded;
+        
+        private class JMapViewerFit extends JMapViewer {
+        	
+            @Override
+            public void tileLoadingFinished(Tile tile, boolean success) {
+                super.tileLoadingFinished(tile, success);
+                if (!loaded & success) {
+                    loaded = true;
+                    setDisplayToFitMapElements(true, false, true);
+                }
+            }
+        }
 
-        public EllipseMapPanel() {
+        public MapPanel() {
             setLayout(new BorderLayout());
-            mapViewer = new JMapViewer();
+            mapViewer = new JMapViewerFit();
+            setPreferredSize(new Dimension(400, 300));
+            mapViewer.setDisplayPosition(new Coordinate(39.8283, -98.5795), 3);
 
             centerMarker = null; // Center marker not initialized until user sets it
             majorAxisMarker = null;
@@ -180,14 +197,17 @@ public class BoundingEllipseFilter implements InitialFilter {
             rotationMarker = null;
             ellipsePolygon = null;
             selectedMarker = null;
-
-            majorAxis = 1.0;
-            minorAxis = 1.0;
-            rotation = 0.0;
+            
+            if (center != null) { // Has existing data, but the UI is being re-initialized. Most common for nested operators.
+            	initializeWithExistingEllipse();
+            }
 
             mapViewer.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     if (centerMarker == null) {
                         Point clickPoint = e.getPoint();
                         ICoordinate coord = mapViewer.getPosition(clickPoint);
@@ -205,7 +225,7 @@ public class BoundingEllipseFilter implements InitialFilter {
 
                         // Initialize axis markers relative to center
                         majorAxisMarker = new MapMarkerDot(coord.getLat(), coord.getLon() + longitudeExtent / 4);
-                        minorAxisMarker = new MapMarkerDot(coord.getLat() + latitudeExtent / 4, coord.getLon());
+                        minorAxisMarker = new MapMarkerDot(coord.getLat() - latitudeExtent / 4, coord.getLon());
                         rotationMarker = new MapMarkerDot(coord.getLat(), coord.getLon() + longitudeExtent / 8);
                         rotationMarker.getStyle().setBackColor(Color.RED); // Differentiating rotation marker
 
@@ -223,6 +243,9 @@ public class BoundingEllipseFilter implements InitialFilter {
 
                 @Override
                 public void mousePressed(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                     if (centerMarker == null) {
                         return; // Do nothing if center is not set
                     }
@@ -235,7 +258,10 @@ public class BoundingEllipseFilter implements InitialFilter {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    selectedMarker = null; // Release the selected marker
+                	if (!isEnabled()) {
+                		return;
+                	}
+                	selectedMarker = null; // Release the selected marker
                     updateEllipse();
                 }
             });
@@ -243,6 +269,9 @@ public class BoundingEllipseFilter implements InitialFilter {
             mapViewer.addMouseMotionListener(new MouseMotionAdapter() {
                 @Override
                 public void mouseDragged(MouseEvent e) {
+                	if (!isEnabled()) {
+                		return;
+                	}
                 	if (centerMarker == null || selectedMarker == null) {
                         return; // Do nothing if center or a selected marker is not set
                     }
@@ -273,8 +302,42 @@ public class BoundingEllipseFilter implements InitialFilter {
                     mapViewer.repaint();
                 }
             });
+            
+            /*
+            mapViewer.addTileLoaderListener(new TileLoaderListener() {
+                @Override
+				public void tileLoadingFinished(Tile tile, boolean success) {
+					
+					
+				}
+            });*/
 
             add(mapViewer, BorderLayout.CENTER);
+        }
+        
+        private void initializeWithExistingEllipse() {
+            this.centerMarker = new MapMarkerDot(center.lat, center.lng);
+
+            // Initialize axis markers
+            double radiansRotation = Math.toRadians(rotation);
+            this.majorAxisMarker = new MapMarkerDot(
+                    center.lat + majorAxis * Math.sin(radiansRotation),
+                    center.lng + majorAxis * Math.cos(radiansRotation));
+            this.minorAxisMarker = new MapMarkerDot(
+                    center.lat + minorAxis * Math.cos(radiansRotation),
+                    center.lng - minorAxis * Math.sin(radiansRotation));
+            this.rotationMarker = new MapMarkerDot(
+                    center.lat + majorAxis / 2 * Math.sin(radiansRotation),
+                    center.lng + majorAxis / 2 * Math.cos(radiansRotation));
+            this.rotationMarker.getStyle().setBackColor(Color.RED);
+
+            // Add markers to the map
+            mapViewer.addMapMarker(centerMarker);
+            mapViewer.addMapMarker(majorAxisMarker);
+            mapViewer.addMapMarker(minorAxisMarker);
+            mapViewer.addMapMarker(rotationMarker);
+
+            updateEllipse();
         }
 
         private MapMarkerDot getClosestMarker(Point clickPoint) {
