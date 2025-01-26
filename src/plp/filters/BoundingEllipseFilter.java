@@ -51,6 +51,11 @@ public class BoundingEllipseFilter implements InitialFilter {
         minorAxis = 1.0; // Default minor axis length in degrees
         rotation = 0.0; // Default rotation angle in degrees
     }
+    
+    @Override
+    public void refreshValidCells() {
+        validCells = h3.polygonToCells(getEllipseBoundary(), null, Config.H3_RESOLUTION);
+    }
 
     @Override
     public void setRequirements(JPanel modifiedParameterPanel) {
@@ -65,7 +70,7 @@ public class BoundingEllipseFilter implements InitialFilter {
         rotation = mapPanel.getRotation();
 
         // Generate H3 indexes within the ellipse boundary
-        validCells = h3.polygonToCells(getEllipseBoundary(), null, Config.H3_RESOLUTION);
+        refreshValidCells();
     }
 
     @Override
@@ -78,7 +83,7 @@ public class BoundingEllipseFilter implements InitialFilter {
             this.rotation = req.rotation;
 
             // Generate H3 indexes within the ellipse boundary
-            validCells = h3.polygonToCells(getEllipseBoundary(), null, Config.H3_RESOLUTION);
+            refreshValidCells();
         } else {
             throw new IllegalArgumentException("Invalid requirement type for BoundingEllipseFilter");
         }

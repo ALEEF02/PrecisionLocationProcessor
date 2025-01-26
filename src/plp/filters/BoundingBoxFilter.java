@@ -34,6 +34,16 @@ public class BoundingBoxFilter implements InitialFilter {
         }
     }
     
+    @Override
+    public void refreshValidCells() {
+    	validCells = h3.polygonToCells(Arrays.asList(
+        		new LatLng(minLatitude, minLongitude),
+        		new LatLng(minLatitude, maxLongitude),
+    			new LatLng(maxLatitude, maxLongitude),
+				new LatLng(maxLatitude, minLongitude)),
+                null, Config.H3_RESOLUTION);
+    }
+    
 	@Override
 	public void setRequirements(JPanel modifiedParameterPanel) {
     	JTextField[] fields = (JTextField[]) modifiedParameterPanel.getClientProperty("fields"); // Get the first component (the filter's parameter panel), Extract input fields
@@ -68,12 +78,7 @@ public class BoundingBoxFilter implements InitialFilter {
                 this.minLongitude = bounds[2];
                 this.maxLongitude = bounds[3];
                 
-                validCells = h3.polygonToCells(Arrays.asList(
-                		new LatLng(minLatitude, minLongitude),
-                		new LatLng(minLatitude, maxLongitude),
-            			new LatLng(maxLatitude, maxLongitude),
-        				new LatLng(maxLatitude, minLongitude)),
-                        null, Config.H3_RESOLUTION);
+                refreshValidCells();
             } else {
                 throw new IllegalArgumentException("Bounding box requires exactly 4 values: [minLat, maxLat, minLon, maxLon]");
             }
