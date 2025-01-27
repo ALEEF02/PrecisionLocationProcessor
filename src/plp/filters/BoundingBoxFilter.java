@@ -13,7 +13,7 @@ import javax.swing.JTextField;
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
 
-import plp.Config;
+import plp.config.Config;
 import plp.filter.InitialFilter;
 import plp.location.LocationCell;
 

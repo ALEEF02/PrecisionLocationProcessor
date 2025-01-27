@@ -16,6 +16,10 @@
 			<name>JOSM</name>
 			<url>https://josm.openstreetmap.de/nexus/content/repositories/releases/</url>
 		</repository>
+		<repository>
+		    <id>jitpack.io</id>
+		    <url>https://jitpack.io</url>
+		</repository>
 	</repositories>
 	
 	<dependencies>
@@ -54,7 +58,23 @@
     		<artifactId>jmapviewer</artifactId>
     		<version>2.22</version>
 		</dependency>
-	</dependencies>
+		
+		<!-- Env Builder -->
+		<dependency>
+			<groupId>com.github.MaikWezinkhof</groupId>
+			<artifactId>ConfigurationBuilder</artifactId>
+			<version>0.4</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.json/json -->
+		<dependency>
+		    <groupId>org.json</groupId>
+		    <artifactId>json</artifactId>
+		    <version>20250107</version>
+		</dependency>
+
+			
+		</dependencies>
 	
 	<build>
 		<sourceDirectory>src</sourceDirectory>

@@ -2,7 +2,10 @@ package plp.ui;
 
 import org.reflections.Reflections;
 
-import plp.Config;
+import com.kaaz.configuration.ConfigurationBuilder;
+
+import plp.config.Config;
+import plp.config.ConfigurationManager;
 import plp.filter.DataFilter;
 import plp.filter.Filter;
 import plp.filter.InitialFilter;
@@ -13,6 +16,7 @@ import plp.output.KMLGenerator;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -197,6 +201,13 @@ public class FilterUI extends JFrame {
                         }
                     }
                     refreshInitialFilters();
+                    try {
+                    	System.out.println(Config.H3_RESOLUTION);
+            			new ConfigurationManager(Config.class, new File("application.cfg")).write();
+            		} catch (Exception e2) {
+            			// TODO Auto-generated catch block
+            			e2.printStackTrace();
+            		}
                     JOptionPane.showMessageDialog(settingsDialog, "Settings saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                     settingsDialog.dispose();
                 } catch (IllegalAccessException | IllegalArgumentException ex) {
@@ -296,7 +307,7 @@ public class FilterUI extends JFrame {
                 addedFilters.add(filter); // Add filter instance to the list
                 filterListModel.addElement(selectedFilter + ": " + filter.getRequirements());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage());
+                JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage(), null, JOptionPane.WARNING_MESSAGE);
             }
         }
     }
@@ -462,7 +473,7 @@ public class FilterUI extends JFrame {
 
         if (dataFilter == null) {
             JOptionPane.showMessageDialog(this, "Error: An InitialFilter is required to start the pipeline.",
-                    "Missing BoundingBoxFilter", JOptionPane.ERROR_MESSAGE);
+                    "Missing InitialFilter", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -480,6 +491,15 @@ public class FilterUI extends JFrame {
     }
 
     public static void main(String[] args) {
+    	
+    	// Load the env variables from the config. This will also build a new cfg file if none exists.
+        try {
+			new ConfigurationBuilder(Config.class, new File("application.cfg")).build(true);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
         SwingUtilities.invokeLater(() -> {
 			try {
 				new FilterUI().setVisible(true);
