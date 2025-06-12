@@ -189,7 +189,7 @@ public class IsochroneFilter implements InitialFilter {
 	public void refreshValidCells() {
 		
 		if (centerPoint == null) return;
-        if (boundaryPoints.isEmpty()) return;
+        if (boundaryPoints == null || boundaryPoints.isEmpty()) return;
 		
     	validCells = h3.polygonToCells(boundaryPoints, null, Config.H3_RESOLUTION);
 
