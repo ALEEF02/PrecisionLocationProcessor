@@ -103,7 +103,6 @@ public class IsochroneFilter implements InitialFilter {
         
 		try {
             boundaryPoints = fetchIsochrone();
-    		System.out.println(boundaryPoints);
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to fetch isochrone data: " + e.getMessage());
@@ -300,7 +299,7 @@ public class IsochroneFilter implements InitialFilter {
             @Override
             public void tileLoadingFinished(Tile tile, boolean success) {
                 super.tileLoadingFinished(tile, success);
-                if (!loaded & success) {
+                if (!loaded && success) {
                     loaded = true;
                     setDisplayToFitMapElements(true, false, true);
                 }
@@ -346,7 +345,6 @@ public class IsochroneFilter implements InitialFilter {
                     }
                     centerMarker = new MapMarkerDot(coord.getLat(), coord.getLon());
                     centerPoint = new LatLng(centerMarker.getLat(), centerMarker.getLon());
-                    System.out.println("Center point: " + centerPoint);
                     mapViewer.addMapMarker(centerMarker);
 
                     mapViewer.repaint();

@@ -202,12 +202,10 @@ public class FilterUI extends JFrame {
                     }
                     refreshInitialFilters();
                     try {
-                    	System.out.println(Config.H3_RESOLUTION);
-            			new ConfigurationManager(Config.class, new File("application.cfg")).write();
-            		} catch (Exception e2) {
-            			// TODO Auto-generated catch block
-            			e2.printStackTrace();
-            		}
+                        new ConfigurationManager(Config.class, new File("application.cfg")).write();
+                    } catch (Exception e2) {
+                        JOptionPane.showMessageDialog(settingsDialog, "Failed to write configuration: " + e2.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                     JOptionPane.showMessageDialog(settingsDialog, "Settings saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                     settingsDialog.dispose();
                 } catch (IllegalAccessException | IllegalArgumentException ex) {
@@ -245,7 +243,7 @@ public class FilterUI extends JFrame {
         int progress = 0;
 
         for (Class<? extends Filter> filterClass : classes) {
-            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " – " + filterClass.getSimpleName());
+            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " Â– " + filterClass.getSimpleName());
             try {
                 Filter filter = filterClass.getDeclaredConstructor().newInstance();
                 availableFilters.put(filterClass.getSimpleName(), filter);
