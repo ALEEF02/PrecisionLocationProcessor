@@ -2,6 +2,10 @@ package plp.ui;
 
 import org.reflections.Reflections;
 
+import com.kaaz.configuration.ConfigurationBuilder;
+
+import plp.config.Config;
+import plp.config.ConfigurationManager;
 import plp.filter.DataFilter;
 import plp.filter.Filter;
 import plp.filter.InitialFilter;
@@ -12,6 +16,8 @@ import plp.output.KMLGenerator;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -84,7 +90,10 @@ public class FilterUI extends JFrame {
         JButton runButton = new JButton("Run Filters");
         JButton addCompositeButton = new JButton("Add Composite Filter"); // Button to add composite filters
         JButton removeButton = new JButton("Remove Filter");
-
+        JButton settingsButton = new JButton("\u2699"); // Unicode for gear symbol
+        settingsButton.setToolTipText("Open Settings");
+        
+        
         // Layout: Top Panel - Filter Selection
         JPanel topPanel = new JPanel();
         topPanel.add(new JLabel("Select Filter:"));
@@ -92,6 +101,7 @@ public class FilterUI extends JFrame {
         topPanel.add(addButton);
         topPanel.add(addCompositeButton);
         topPanel.add(removeButton);
+        topPanel.add(settingsButton);
         
         // Layout: Center Panel - Parameter input and filter list
         add(topPanel, BorderLayout.NORTH);
@@ -129,6 +139,87 @@ public class FilterUI extends JFrame {
         
         addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
         runButton.addActionListener(e -> runFilters()); // Execute pipeline and generate KML
+        
+        settingsButton.addActionListener(e -> {
+            JDialog settingsDialog = new JDialog(this, "Settings", true);
+            settingsDialog.setSize(400, 300);
+            settingsDialog.setLayout(new BorderLayout());
+
+            JPanel configPanel = new JPanel();
+            configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
+
+            // Use reflection to get all Config variables
+            Field[] fields = Config.class.getDeclaredFields();
+            Map<Field, JTextField> fieldInputs = new HashMap<>();
+            
+            for (Field field : fields) {
+                if (Modifier.isStatic(field.getModifiers())) {
+                    JLabel fieldLabel = new JLabel(field.getName() + ":");
+                    JTextField valueField = new JTextField();
+
+                    // Pre-fill the current value
+                    try {
+                        field.setAccessible(true);
+                        Object value = field.get(null);
+                        valueField.setText(String.valueOf(value));
+                    } catch (IllegalAccessException ex) {
+                        valueField.setText("Error");
+                    }
+
+                    JPanel fieldPanel = new JPanel(new BorderLayout());
+                    fieldPanel.add(fieldLabel, BorderLayout.WEST);
+                    fieldPanel.add(valueField, BorderLayout.CENTER);
+
+                    configPanel.add(fieldPanel);
+                    fieldInputs.put(field, valueField);
+                }
+            }
+
+            JScrollPane scrollPane = new JScrollPane(configPanel);
+            settingsDialog.add(scrollPane, BorderLayout.CENTER);
+
+            JPanel buttonPanel = new JPanel();
+            JButton discardButton = new JButton("Discard");
+            discardButton.addActionListener(evt -> settingsDialog.dispose());
+
+            JButton saveButton = new JButton("Save");
+            saveButton.addActionListener(evt -> {
+                try {
+                    for (Map.Entry<Field, JTextField> entry : fieldInputs.entrySet()) {
+                        Field field = entry.getKey();
+                        JTextField valueField = entry.getValue();
+                        String textValue = valueField.getText();
+
+                        if (field.getType() == int.class) {
+                            field.setInt(null, Integer.parseInt(textValue));
+                        } else if (field.getType() == double.class) {
+                            field.setDouble(null, Double.parseDouble(textValue));
+                        } else if (field.getType() == boolean.class) {
+                            field.setBoolean(null, Boolean.parseBoolean(textValue));
+                        } else {
+                            field.set(null, textValue);
+                        }
+                    }
+                    refreshInitialFilters();
+                    try {
+                        new ConfigurationManager(Config.class, new File("application.cfg")).write();
+                    } catch (Exception e2) {
+                        JOptionPane.showMessageDialog(settingsDialog, "Failed to write configuration: " + e2.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    JOptionPane.showMessageDialog(settingsDialog, "Settings saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    settingsDialog.dispose();
+                } catch (IllegalAccessException | IllegalArgumentException ex) {
+                    JOptionPane.showMessageDialog(settingsDialog, "Failed to save settings: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+
+            buttonPanel.add(discardButton);
+            buttonPanel.add(saveButton);
+
+            settingsDialog.add(buttonPanel, BorderLayout.SOUTH);
+            settingsDialog.setLocationRelativeTo(this);
+            settingsDialog.setVisible(true);
+        });
 
         try {
 			updateParameterPanel();
@@ -152,7 +243,7 @@ public class FilterUI extends JFrame {
         int progress = 0;
 
         for (Class<? extends Filter> filterClass : classes) {
-            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " – " + filterClass.getSimpleName());
+            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " Â– " + filterClass.getSimpleName());
             try {
                 Filter filter = filterClass.getDeclaredConstructor().newInstance();
                 availableFilters.put(filterClass.getSimpleName(), filter);
@@ -214,7 +305,7 @@ public class FilterUI extends JFrame {
                 addedFilters.add(filter); // Add filter instance to the list
                 filterListModel.addElement(selectedFilter + ": " + filter.getRequirements());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage());
+                JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage(), null, JOptionPane.WARNING_MESSAGE);
             }
         }
     }
@@ -236,7 +327,7 @@ public class FilterUI extends JFrame {
     }
     
     /**
-     * Adds a composite filter with logical operators and sub-filters.
+     * Finish creating the composite filter with logical operators and sub-filters.
      * Allows the user to set parameters for sub-filters dynamically.
      */
     private CompletableFuture<OperatorFilter> createCompositeFilter() {
@@ -348,7 +439,18 @@ public class FilterUI extends JFrame {
         dialog.setVisible(true);
         return future; // Return the constructed composite filter
     }
-        
+       
+    /*
+     * Refresh valid cells for initial filters.
+     * Necessary when H3 resolution changes.
+     */
+    private void refreshInitialFilters() {
+    	for (Filter filter : addedFilters) {
+            if (filter instanceof InitialFilter) {
+            	((InitialFilter) filter).refreshValidCells();
+            }
+        }
+    }
 
     /**
      * Executes the filter pipeline, applies all configured filters, and generates a KML file.
@@ -369,7 +471,7 @@ public class FilterUI extends JFrame {
 
         if (dataFilter == null) {
             JOptionPane.showMessageDialog(this, "Error: An InitialFilter is required to start the pipeline.",
-                    "Missing BoundingBoxFilter", JOptionPane.ERROR_MESSAGE);
+                    "Missing InitialFilter", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -387,6 +489,15 @@ public class FilterUI extends JFrame {
     }
 
     public static void main(String[] args) {
+    	
+    	// Load the env variables from the config. This will also build a new cfg file if none exists.
+        try {
+			new ConfigurationBuilder(Config.class, new File("application.cfg")).build(true);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
         SwingUtilities.invokeLater(() -> {
 			try {
 				new FilterUI().setVisible(true);

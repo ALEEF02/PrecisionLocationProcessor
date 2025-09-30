@@ -28,7 +28,7 @@ import org.openstreetmap.gui.jmapviewer.interfaces.MapPolygon;
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
 
-import plp.Config;
+import plp.config.Config;
 import plp.filter.InitialFilter;
 import plp.location.LocationCell;
 
@@ -47,6 +47,11 @@ public class BoundingPolygonFilter implements InitialFilter {
         }
         boundaryPoints = new ArrayList<>();
     }
+    
+    @Override
+    public void refreshValidCells() {
+    	validCells = h3.polygonToCells(boundaryPoints, null, Config.H3_RESOLUTION);
+    }
 
     @Override
     public void setRequirements(JPanel modifiedParameterPanel) {
@@ -62,7 +67,7 @@ public class BoundingPolygonFilter implements InitialFilter {
 
         boundaryPoints.clear();
         boundaryPoints = points;
-        validCells = h3.polygonToCells(boundaryPoints, null, Config.H3_RESOLUTION);
+        refreshValidCells();
     }
 
     @SuppressWarnings("unchecked")
@@ -77,7 +82,7 @@ public class BoundingPolygonFilter implements InitialFilter {
                 throw new IllegalArgumentException("Must be an array of LatLng.");
             }
             boundaryPoints = (List<LatLng>) points;
-            validCells = h3.polygonToCells(boundaryPoints, null, Config.H3_RESOLUTION);
+            refreshValidCells();
         } else {
             throw new IllegalArgumentException("Invalid requirement type for BoundingBoxFilter");
         }

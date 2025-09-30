@@ -13,7 +13,7 @@ import javax.swing.JTextField;
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
 
-import plp.Config;
+import plp.config.Config;
 import plp.filter.InitialFilter;
 import plp.location.LocationCell;
 
@@ -32,6 +32,16 @@ public class BoundingBoxFilter implements InitialFilter {
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize H3 library", e);
         }
+    }
+    
+    @Override
+    public void refreshValidCells() {
+    	validCells = h3.polygonToCells(Arrays.asList(
+        		new LatLng(minLatitude, minLongitude),
+        		new LatLng(minLatitude, maxLongitude),
+    			new LatLng(maxLatitude, maxLongitude),
+				new LatLng(maxLatitude, minLongitude)),
+                null, Config.H3_RESOLUTION);
     }
     
 	@Override
@@ -68,12 +78,7 @@ public class BoundingBoxFilter implements InitialFilter {
                 this.minLongitude = bounds[2];
                 this.maxLongitude = bounds[3];
                 
-                validCells = h3.polygonToCells(Arrays.asList(
-                		new LatLng(minLatitude, minLongitude),
-                		new LatLng(minLatitude, maxLongitude),
-            			new LatLng(maxLatitude, maxLongitude),
-        				new LatLng(maxLatitude, minLongitude)),
-                        null, Config.H3_RESOLUTION);
+                refreshValidCells();
             } else {
                 throw new IllegalArgumentException("Bounding box requires exactly 4 values: [minLat, maxLat, minLon, maxLon]");
             }

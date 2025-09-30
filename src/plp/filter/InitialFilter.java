@@ -15,4 +15,11 @@ public interface InitialFilter extends Filter {
      * @return List of Cell h3 indexes
      */
     List<LocationCell> getValidCells();
+    
+    /**
+     * Refresh the valid cells of the filter.
+     * Useful for when the resolution changes.
+     * Must not require {@link plp.filter.Filter#setLocations(List)} to be called first.
+     */
+    void refreshValidCells();
 }
