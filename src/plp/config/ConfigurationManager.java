@@ -53,7 +53,7 @@ public class ConfigurationManager {
 
     /**
      * Writes the config back to the disk
-     *-
+     *
      * @throws IOException
      */
     public void write() throws Exception {

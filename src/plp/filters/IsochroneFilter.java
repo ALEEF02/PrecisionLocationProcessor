@@ -15,7 +15,11 @@ import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -30,6 +34,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import plp.config.Config;
 import plp.filter.InitialFilter;
@@ -39,6 +44,7 @@ public class IsochroneFilter implements InitialFilter {
 
 	private LatLng centerPoint;
     private int maxMinutes;
+    private IsochroneRequirements computedIsochrone = new IsochroneRequirements(null, 0, null);
     private TransportType transportationMode;
 	private List<LatLng> boundaryPoints;
     private List<Long> validCells;
@@ -97,7 +103,6 @@ public class IsochroneFilter implements InitialFilter {
         
 		try {
             boundaryPoints = fetchIsochrone();
-    		System.out.println(boundaryPoints);
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to fetch isochrone data: " + e.getMessage());
@@ -132,6 +137,13 @@ public class IsochroneFilter implements InitialFilter {
 	}
 	
 	private List<LatLng> fetchIsochrone() throws Exception {
+
+        if (computedIsochrone.equals(new IsochroneRequirements(centerPoint, maxMinutes, transportationMode))) {
+            return boundaryPoints;
+        } else {
+            System.out.println("Fetching new isochrone.");
+        }
+
 		String urlString = "https://api.openrouteservice.org/v2/isochrones/" + transportationMode.getProfileString();
         URL url = new URI(urlString).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -181,6 +193,9 @@ public class IsochroneFilter implements InitialFilter {
                 polygonPoints.add(new LatLng(lat, lng));
             }
 
+            computedIsochrone = new IsochroneRequirements(centerPoint, maxMinutes, transportationMode);
+            boundaryPoints = polygonPoints;
+
             return polygonPoints;
         }
 	}
@@ -226,6 +241,48 @@ public class IsochroneFilter implements InitialFilter {
             mapPanel.updateIsochrone();
         });
 
+        // Add real-time update listeners
+        maxMinutesField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateMaxMinutes();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateMaxMinutes();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateMaxMinutes();
+            }
+
+            private void updateMaxMinutes() {
+                try {
+                    String text = maxMinutesField.getText().trim();
+                    if (!text.isEmpty()) {
+                        int newMaxMinutes = Integer.parseInt(text);
+                        if (newMaxMinutes >= 1 && newMaxMinutes <= 60) {
+                            maxMinutes = newMaxMinutes;
+                        }
+                    }
+                } catch (NumberFormatException ex) {
+                    // Invalid input, ignore
+                }
+            }
+        });
+
+        transportTypeComboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                TransportType selectedMode = (TransportType) transportTypeComboBox.getSelectedItem();
+                if (selectedMode != null) {
+                    transportationMode = selectedMode;
+                }
+            }
+        });
+
         return panel;
     }
 	
@@ -242,7 +299,7 @@ public class IsochroneFilter implements InitialFilter {
             @Override
             public void tileLoadingFinished(Tile tile, boolean success) {
                 super.tileLoadingFinished(tile, success);
-                if (!loaded & success) {
+                if (!loaded && success) {
                     loaded = true;
                     setDisplayToFitMapElements(true, false, true);
                 }
@@ -358,6 +415,11 @@ public class IsochroneFilter implements InitialFilter {
             // Simulate fetching isochrone data and update the map
             // This should call the API and update validCells accordingly
             if (centerMarker != null) {
+                try {
+                    fetchIsochrone();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 refreshValidCells();
                 updateBoundingPolygon();
                 mapViewer.repaint();
@@ -365,7 +427,7 @@ public class IsochroneFilter implements InitialFilter {
         }
     }
 	
-	enum TransportType {
+	public enum TransportType {
     	Driving("driving-car"),
         PublicTransport("public-transport"),
         Cycling("cycling-regular"),
@@ -406,6 +468,30 @@ public class IsochroneFilter implements InitialFilter {
 
         public TransportType getTransportationMode() {
             return transportationMode;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            IsochroneRequirements other = (IsochroneRequirements) obj;
+            if (!Objects.equals(centerPoint, other.centerPoint)) {
+                return false;
+            }
+            if (maxMinutes != other.maxMinutes) {
+                return false;
+            }
+            if (!Objects.equals(transportationMode, other.transportationMode)) {
+                return false;
+            }
+            return true;
         }
     }
 
