@@ -44,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
 public class FilterUI extends JFrame {
     private JComboBox<String> filterSelectionBox;
     private JPanel parameterPanel;
-    private DefaultListModel<String> filterListModel;
+    private DefaultListModel<String> addedFilterListModel;
     private ArrayList<Filter> addedFilters;
     private Map<String, Filter> availableFilters;
     private JLabel statusLabel;
@@ -89,15 +89,15 @@ public class FilterUI extends JFrame {
         filterSelectionBox = new JComboBox<>(availableFilters.keySet().toArray(new String[0]));
         parameterPanel = new JPanel(new BorderLayout());
         parameterPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        filterListModel = new DefaultListModel<>();
-        JList<String> filterList = new JList<>(filterListModel) {
+        addedFilterListModel = new DefaultListModel<>();
+        JList<String> addedFilterList = new JList<>(addedFilterListModel) {
         	@Override
         	public boolean getScrollableTracksViewportWidth() {
         		return true; // Make the list width track the viewport width so wrapping updates on resize
         	}
         };
-        filterList.setVisibleRowCount(-1);
-        filterList.setCellRenderer(new ListCellRenderer<String>() {
+        addedFilterList.setVisibleRowCount(-1);
+        addedFilterList.setCellRenderer(new ListCellRenderer<String>() {
         	private final JTextArea textArea;
         	{
         		textArea = new JTextArea();
@@ -126,14 +126,14 @@ public class FilterUI extends JFrame {
         });
 
         // Force height recomputation on resize so wrapping updates immediately
-        filterList.addComponentListener(new ComponentAdapter() {
+        addedFilterList.addComponentListener(new ComponentAdapter() {
         	@Override
         	public void componentResized(ComponentEvent e) {
-        		int old = filterList.getFixedCellHeight();
-        		filterList.setFixedCellHeight(1);
-        		filterList.setFixedCellHeight(old);
-        		filterList.revalidate();
-        		filterList.repaint();
+        		int old = addedFilterList.getFixedCellHeight();
+        		addedFilterList.setFixedCellHeight(1);
+        		addedFilterList.setFixedCellHeight(old);
+        		addedFilterList.revalidate();
+        		addedFilterList.repaint();
         	}
         });
         
@@ -147,8 +147,36 @@ public class FilterUI extends JFrame {
         settingsButton.setToolTipText("Open Settings");
         JButton runButton = new JButton("Run");
 
+        // Distinguish InitialFilters in the selection with Technozen light green
+        java.util.Set<String> initialFilterNames = new java.util.HashSet<>();
+        for (Map.Entry<String, Filter> entry : availableFilters.entrySet()) {
+        	if (entry.getValue() instanceof InitialFilter) {
+        		initialFilterNames.add(entry.getKey());
+        	}
+        }
+        Color technozenLightGreen = new Color(235, 245, 241);
+        Color initialFilterSelectedBackground = new Color(224, 239, 233);
+        Color initialFilterSelectedForeground = new Color(30, 175, 117);
+        filterSelectionBox.setRenderer(new DefaultListCellRenderer() {
+        	@Override
+        	public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+        		JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+        		if (value != null && initialFilterNames.contains(value.toString())) {
+        			if (isSelected) {
+        				label.setBackground(initialFilterSelectedBackground);
+        				label.setForeground(initialFilterSelectedForeground);
+        			} else {
+        				label.setBackground(technozenLightGreen);
+        				label.setForeground(list.getForeground());
+        			}
+        			label.setOpaque(true);
+        		}
+        		return label;
+        	}
+        });
+
         // Toolbar (North)
-        JToolBar toolBar = new JToolBar();
+		JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
         toolBar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(226, 232, 240)),
@@ -173,7 +201,7 @@ public class FilterUI extends JFrame {
         add(toolBar, BorderLayout.NORTH);
 
         // Right sidebar with fixed preferred width
-        JScrollPane listScroll = new JScrollPane(filterList) {
+        JScrollPane listScroll = new JScrollPane(addedFilterList) {
         	@Override
         	public Dimension getPreferredSize() {
         		// Keep a sensible default width while allowing expansion
@@ -209,9 +237,16 @@ public class FilterUI extends JFrame {
             BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
             BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
+        
+        // Create a status panel that can hold either text or components
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        statusPanel.setOpaque(false);
         statusLabel = new JLabel("Ready");
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 11));
-        statusBar.add(statusLabel, BorderLayout.WEST);
+        statusPanel.add(statusLabel);
+        
+        statusBar.add(statusPanel, BorderLayout.WEST);
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         runButton.setFont(runButton.getFont().deriveFont(Font.BOLD, 12));
         actionPanel.add(runButton);
@@ -227,31 +262,34 @@ public class FilterUI extends JFrame {
 			}
 		}); // Load parameter panel dynamically
         
-        addButton.addActionListener(e -> {
+		addButton.addActionListener(e -> {
 			try {
 				addFilter();
 			} catch (Exception e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
+			updateStatus();
 		}); // Add filter to the list
 
-        removeButton.addActionListener(e -> {
-            int selectedIndex = filterList.getSelectedIndex();
-            if (selectedIndex != -1) {
-                filterListModel.remove(selectedIndex);
-                addedFilters.remove(selectedIndex);
-            } else {
-                JOptionPane.showMessageDialog(this, "No filter selected to remove.");
-            }
-        });
+		removeButton.addActionListener(e -> {
+			int selectedIndex = addedFilterList.getSelectedIndex();
+			if (selectedIndex != -1) {
+				addedFilterListModel.remove(selectedIndex);
+				addedFilters.remove(selectedIndex);
+				updateStatus();
+			} else {
+				JOptionPane.showMessageDialog(this, "No filter selected to remove.");
+			}
+		});
         
-        addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
+		addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
 
         runButton.addActionListener(e -> { // Execute pipeline and generate KML
         	statusLabel.setText("Running filters...");
         	runFilters();
         	statusLabel.setText("Completed. KML generated.");
+        	updateStatus();
         });
         
         settingsButton.addActionListener(e -> {
@@ -336,13 +374,56 @@ public class FilterUI extends JFrame {
             settingsDialog.setVisible(true);
         });
 
-        try {
+		try {
 			updateParameterPanel();
 		} catch (Exception e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} // Initialize with the first filter's parameters
+		updateStatus();
     }
+
+	/**
+	 * Updates the bottom-left status text to indicate when an InitialFilter is required.
+	 */
+	private void updateStatus() {
+		boolean hasInitial = false;
+		for (Filter f : addedFilters) {
+			if (f instanceof InitialFilter) { hasInitial = true; break; }
+		}
+		
+		// Find the status panel in the status bar
+		JPanel statusBar = (JPanel) getContentPane().getComponent(2); // Status bar is the 3rd component
+		JPanel statusPanel = (JPanel) statusBar.getComponent(0); // Status panel is the first component
+		statusPanel.removeAll();
+		
+		if (!hasInitial) {
+			JLabel needLabel = new JLabel("Need to add an ");
+			needLabel.setFont(statusLabel.getFont());
+			
+            JPanel tagPanel = new JPanel();
+            tagPanel.setLayout(new BorderLayout());
+            tagPanel.setBorder(new RoundedBorder(
+                new Color(235, 245, 241),
+                new Color(200, 230, 220),
+                2, 6, 2, 6));
+            JLabel tagLabel = new JLabel("InitialFilter");
+			tagLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD));
+			tagLabel.setForeground(new Color(30, 175, 117));
+			tagLabel.setBackground(new Color(235, 245, 241));
+            
+			tagPanel.add(tagLabel);
+            
+			statusPanel.add(needLabel);
+			statusPanel.add(tagPanel);
+		} else {
+			statusLabel.setText("Ready");
+			statusPanel.add(statusLabel);
+		}
+		
+		statusPanel.revalidate();
+		statusPanel.repaint();
+	}
 
     /**
      * Dynamically loads all classes in the "filters" package that implement the Filter interface.
@@ -358,7 +439,7 @@ public class FilterUI extends JFrame {
         int progress = 0;
 
         for (Class<? extends Filter> filterClass : classes) {
-            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + "  " + filterClass.getSimpleName());
+            progressBar.setString("Loading filters... " + (progress+1) + "/" + totalClasses + " — " + filterClass.getSimpleName());
             try {
                 Filter filter = filterClass.getDeclaredConstructor().newInstance();
                 availableFilters.put(filterClass.getSimpleName(), filter);
@@ -428,7 +509,7 @@ public class FilterUI extends JFrame {
             	JPanel filterParameterPanel = (JPanel) parameterPanel.getComponent(0);
                 filter.setRequirements(filterParameterPanel); // Set the requirements dynamically
                 addedFilters.add(filter); // Add filter instance to the list
-                filterListModel.addElement(selectedFilter + ": " + filter.getRequirements());
+                addedFilterListModel.addElement(selectedFilter + ": " + filter.getRequirements());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(rootPane, "Invalid input: " + ex.getMessage(), null, JOptionPane.WARNING_MESSAGE);
             }
@@ -443,7 +524,8 @@ public class FilterUI extends JFrame {
         createCompositeFilter().thenAccept(compositeFilter -> {
             if (compositeFilter != null) {
                 addedFilters.add(compositeFilter);
-                filterListModel.addElement(compositeFilter.getRequirements());
+                addedFilterListModel.addElement(compositeFilter.getRequirements());
+                updateStatus();
             }
         }).exceptionally(ex -> {
             ex.printStackTrace(); // Log errors
@@ -640,6 +722,8 @@ public class FilterUI extends JFrame {
 	    	UIManager.put( "List.background", new Color(255, 255, 255));
 	    	UIManager.put( "List.selectionBackground", new Color(219, 234, 254));
 	    	UIManager.put( "List.selectionForeground", new Color(30, 64, 175));
+	    	UIManager.put( "ComboBox.selectionBackground", new Color(219, 234, 254));
+	    	UIManager.put( "ComboBox.selectionForeground", new Color(30, 64, 175));
 	    	
 	    	// Cross-platform font considerations
 	    	UIManager.put( "defaultFont", new Font("Dialog", Font.PLAIN, 12));
