@@ -15,7 +15,10 @@ import plp.operator.LogicalOperator;
 import plp.output.KMLGenerator;
 
 import javax.swing.*;
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -44,14 +47,17 @@ public class FilterUI extends JFrame {
     private DefaultListModel<String> filterListModel;
     private ArrayList<Filter> addedFilters;
     private Map<String, Filter> availableFilters;
+    private JLabel statusLabel;
 
     public FilterUI() throws Exception {
         super("PrecisionLocationProcessor");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setSize(800, 600);
+        setSize(1000, 700);
+        setMinimumSize(new Dimension(800, 600));
+        setLocationRelativeTo(null); // Center on screen
         
-     // Progress bar setup
+        // Progress bar setup
         JProgressBar progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
         progressBar.setString("Loading filters...");
@@ -81,33 +87,136 @@ public class FilterUI extends JFrame {
     private void initializeUIComponents() {
     	// UI Components
         filterSelectionBox = new JComboBox<>(availableFilters.keySet().toArray(new String[0]));
-        parameterPanel = new JPanel();
+        parameterPanel = new JPanel(new BorderLayout());
+        parameterPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         filterListModel = new DefaultListModel<>();
-        JList<String> filterList = new JList<>(filterListModel);
+        JList<String> filterList = new JList<>(filterListModel) {
+        	@Override
+        	public boolean getScrollableTracksViewportWidth() {
+        		return true; // Make the list width track the viewport width so wrapping updates on resize
+        	}
+        };
+        filterList.setVisibleRowCount(-1);
+        filterList.setCellRenderer(new ListCellRenderer<String>() {
+        	private final JTextArea textArea;
+        	{
+        		textArea = new JTextArea();
+        		textArea.setLineWrap(true);
+        		textArea.setWrapStyleWord(true);
+        		textArea.setOpaque(true);
+        		textArea.setFont(new Font("Dialog", Font.PLAIN, 11));
+        		textArea.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        	}
+            @Override
+            public Component getListCellRendererComponent(JList<? extends String> list, String value, int index, boolean isSelected, boolean cellHasFocus) {
+                textArea.setText(value == null ? "" : value);
+                int width = list.getWidth();
+                if (width > 0) {
+                	textArea.setSize(width, Short.MAX_VALUE);
+                }
+                if (isSelected) {
+                	textArea.setBackground(list.getSelectionBackground());
+                	textArea.setForeground(list.getSelectionForeground());
+                } else {
+                	textArea.setBackground(list.getBackground());
+                	textArea.setForeground(list.getForeground());
+                }
+                return textArea;
+            }
+        });
+
+        // Force height recomputation on resize so wrapping updates immediately
+        filterList.addComponentListener(new ComponentAdapter() {
+        	@Override
+        	public void componentResized(ComponentEvent e) {
+        		int old = filterList.getFixedCellHeight();
+        		filterList.setFixedCellHeight(1);
+        		filterList.setFixedCellHeight(old);
+        		filterList.revalidate();
+        		filterList.repaint();
+        	}
+        });
+        
         addedFilters = new ArrayList<>();
 
-        JButton addButton = new JButton("Add Filter");
-        JButton runButton = new JButton("Run Filters");
-        JButton addCompositeButton = new JButton("Add Composite Filter"); // Button to add composite filters
-        JButton removeButton = new JButton("Remove Filter");
+        JButton addButton = new JButton("Add");
+        JButton addCompositeButton = new JButton("Add Composite");
+        JButton removeButton = new JButton("Remove");
         JButton settingsButton = new JButton("\u2699"); // Unicode for gear symbol
+        settingsButton.setFont(new Font("Dialog", Font.PLAIN, 16));
         settingsButton.setToolTipText("Open Settings");
+        JButton runButton = new JButton("Run");
+
+        // Toolbar (North)
+        JToolBar toolBar = new JToolBar();
+        toolBar.setFloatable(false);
+        toolBar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(226, 232, 240)),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
         
-        
-        // Layout: Top Panel - Filter Selection
-        JPanel topPanel = new JPanel();
-        topPanel.add(new JLabel("Select Filter:"));
-        topPanel.add(filterSelectionBox);
-        topPanel.add(addButton);
-        topPanel.add(addCompositeButton);
-        topPanel.add(removeButton);
-        topPanel.add(settingsButton);
-        
-        // Layout: Center Panel - Parameter input and filter list
-        add(topPanel, BorderLayout.NORTH);
-        add(parameterPanel, BorderLayout.CENTER);
-        add(new JScrollPane(filterList), BorderLayout.EAST);
-        add(runButton, BorderLayout.SOUTH);
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setFont(filterLabel.getFont().deriveFont(Font.BOLD, 12));
+        toolBar.add(filterLabel);
+        toolBar.add(Box.createHorizontalStrut(8));
+        toolBar.add(filterSelectionBox);
+        toolBar.add(Box.createHorizontalStrut(8));
+        toolBar.addSeparator();
+        toolBar.add(Box.createHorizontalStrut(8));
+        toolBar.add(addButton);
+        toolBar.add(Box.createHorizontalStrut(4));
+        toolBar.add(addCompositeButton);
+        toolBar.add(Box.createHorizontalStrut(4));
+        toolBar.add(removeButton);
+        toolBar.add(Box.createHorizontalGlue());
+        toolBar.add(settingsButton);
+        add(toolBar, BorderLayout.NORTH);
+
+        // Right sidebar with fixed preferred width
+        JScrollPane listScroll = new JScrollPane(filterList) {
+        	@Override
+        	public Dimension getPreferredSize() {
+        		// Keep a sensible default width while allowing expansion
+        		Dimension d = super.getPreferredSize();
+        		if (d.width < 260) d.width = 260;
+        		return d;
+        	}
+        };
+        listScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        listScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        JPanel addedFiltersPanel = new JPanel(new BorderLayout());
+        addedFiltersPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+            "Added Filters",
+            0, 0, new Font("Dialog", Font.BOLD, 12)
+        ));
+        addedFiltersPanel.add(listScroll, BorderLayout.CENTER);
+        addedFiltersPanel.setPreferredSize(new Dimension(260, 0));
+        addedFiltersPanel.setMinimumSize(new Dimension(260, 0));
+        addedFiltersPanel.setMaximumSize(new Dimension(260, Integer.MAX_VALUE));
+
+        // Split pane between parameter center and right sidebar
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        split.setLeftComponent(parameterPanel);
+        split.setRightComponent(addedFiltersPanel);
+        split.setResizeWeight(1.0);
+        split.setDividerSize(6);
+        add(split, BorderLayout.CENTER);
+
+        // Status bar (South)
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        statusLabel = new JLabel("Ready");
+        statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 11));
+        statusBar.add(statusLabel, BorderLayout.WEST);
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        runButton.setFont(runButton.getFont().deriveFont(Font.BOLD, 12));
+        actionPanel.add(runButton);
+        statusBar.add(actionPanel, BorderLayout.EAST);
+        add(statusBar, BorderLayout.SOUTH);
     	
         filterSelectionBox.addActionListener(e -> {
 			try {
@@ -138,11 +247,17 @@ public class FilterUI extends JFrame {
         });
         
         addCompositeButton.addActionListener(e -> addCompositeFilter()); // Add composite filters
-        runButton.addActionListener(e -> runFilters()); // Execute pipeline and generate KML
+
+        runButton.addActionListener(e -> { // Execute pipeline and generate KML
+        	statusLabel.setText("Running filters...");
+        	runFilters();
+        	statusLabel.setText("Completed. KML generated.");
+        });
         
         settingsButton.addActionListener(e -> {
             JDialog settingsDialog = new JDialog(this, "Settings", true);
             settingsDialog.setSize(400, 300);
+            settingsDialog.setMinimumSize(new Dimension(400, 300));
             settingsDialog.setLayout(new BorderLayout());
 
             JPanel configPanel = new JPanel();
@@ -276,7 +391,17 @@ public class FilterUI extends JFrame {
         String selectedFilter = (String) filterSelectionBox.getSelectedItem();
         Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
         if (filter != null) {
-            parameterPanel.add(filter.getParameterPanel()); // Add the filter's parameter UI
+            JPanel filterPanel = filter.getParameterPanel(); // Get the filter's supplied parameter panel
+            // Apply consistent styling to filter parameter panels
+            filterPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(
+                    BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                    filter.getClass().getSimpleName(),
+                    0, 0, new Font("Dialog", Font.BOLD, 12)
+                ),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+            ));
+            parameterPanel.add(filterPanel); // Add the filter's parameter UI
         }
         parameterPanel.revalidate();
         parameterPanel.repaint();
@@ -337,6 +462,7 @@ public class FilterUI extends JFrame {
         // Create a dialog to select sub-filters and operators
     	JFrame dialog = new JFrame("Create Composite Filter");
         dialog.setSize(700, 800);
+        dialog.setMinimumSize(new Dimension(600, 600));
         dialog.setLayout(new BorderLayout());
         dialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -497,7 +623,33 @@ public class FilterUI extends JFrame {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-    	
+	    // Apply Technozen-inspired modern Look & Feel
+	    try {
+	    	// Technozen palette: white, matte silver, light blue, light green, black
+	    	UIManager.put( "Component.arc", 12 );
+	    	UIManager.put( "Button.arc", 14 );
+	    	UIManager.put( "TextComponent.arc", 12 );
+	    	UIManager.put( "ScrollBar.showButtons", true );
+	    	UIManager.put( "Button.focusedBackground", new Color(235, 245, 241));
+	    	UIManager.put( "Button.background", new Color(248, 250, 252));
+	    	UIManager.put( "Button.foreground", new Color(51, 65, 85));
+	    	UIManager.put( "Panel.background", new Color(255, 255, 255));
+	    	UIManager.put( "ToolBar.background", new Color(248, 250, 252));
+	    	UIManager.put( "ToolBar.borderColor", new Color(226, 232, 240));
+	    	UIManager.put( "SplitPane.background", new Color(248, 250, 252));
+	    	UIManager.put( "List.background", new Color(255, 255, 255));
+	    	UIManager.put( "List.selectionBackground", new Color(219, 234, 254));
+	    	UIManager.put( "List.selectionForeground", new Color(30, 64, 175));
+	    	
+	    	// Cross-platform font considerations
+	    	UIManager.put( "defaultFont", new Font("Dialog", Font.PLAIN, 12));
+	    	UIManager.put( "Label.font", new Font("Dialog", Font.PLAIN, 12));
+	    	UIManager.put( "Button.font", new Font("Dialog", Font.PLAIN, 12));
+	    	UIManager.put( "ComboBox.font", new Font("Dialog", Font.PLAIN, 12));
+	    	
+	    	FlatLightLaf.setup();
+	    } catch (Exception ignore) {}
+
         SwingUtilities.invokeLater(() -> {
 			try {
 				new FilterUI().setVisible(true);

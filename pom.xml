@@ -72,6 +72,13 @@
 		    <artifactId>json</artifactId>
 		    <version>20250107</version>
 		</dependency>
+		
+		<!-- FlatLaf for modern cross-platform Look & Feel -->
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf</artifactId>
+			<version>3.6</version>
+		</dependency>
 
 			
 		</dependencies>

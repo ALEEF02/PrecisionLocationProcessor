@@ -57,7 +57,7 @@ public class OperatorFilter implements Filter {
 
             switch (operator) {
                 case OR -> result = OperatorFactory.applyOr(result, nextResult);
-                case NOT -> result = OperatorFactory.applyNot(locations, nextResult);
+                case NOT -> result = OperatorFactory.applyNot(locations, nextResult); // TODO: Fails with multiple sub-filters
                 case XOR -> result = OperatorFactory.applyExclusiveOr(result, nextResult);
                 default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
             }
