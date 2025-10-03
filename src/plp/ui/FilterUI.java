@@ -45,9 +45,11 @@ public class FilterUI extends JFrame {
     private JComboBox<String> filterSelectionBox;
     private JPanel parameterPanel;
     private DefaultListModel<String> addedFilterListModel;
+    private JList<String> addedFilterList;
     private ArrayList<Filter> addedFilters;
     private Map<String, Filter> availableFilters;
     private JLabel statusLabel;
+    private int editingFilterIndex = -1; // Track which filter is being edited (-1 means not editing)
 
     public FilterUI() throws Exception {
         super("PrecisionLocationProcessor");
@@ -90,7 +92,7 @@ public class FilterUI extends JFrame {
         parameterPanel = new JPanel(new BorderLayout());
         parameterPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         addedFilterListModel = new DefaultListModel<>();
-        JList<String> addedFilterList = new JList<>(addedFilterListModel) {
+        addedFilterList = new JList<>(addedFilterListModel) {
         	@Override
         	public boolean getScrollableTracksViewportWidth() {
         		return true; // Make the list width track the viewport width so wrapping updates on resize
@@ -136,6 +138,26 @@ public class FilterUI extends JFrame {
         		addedFilterList.repaint();
         	}
         });
+        
+        // Add double-click listener for editing filters
+        addedFilterList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int selectedIndex = addedFilterList.getSelectedIndex();
+                    if (selectedIndex != -1) {
+                        try {
+                            editFilter(selectedIndex);
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(FilterUI.this, "Error editing filter: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Add tooltip to indicate double-click functionality
+        addedFilterList.setToolTipText("Double-click a filter to edit its parameters");
         
         addedFilters = new ArrayList<>();
 
@@ -273,6 +295,12 @@ public class FilterUI extends JFrame {
 		}); // Add filter to the list
 
 		removeButton.addActionListener(e -> {
+            // Don't allow removing filters while editing
+            if (editingFilterIndex != -1) {
+                JOptionPane.showMessageDialog(this, "Please save or cancel the current edit before removing a filter.", "Editing in Progress", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
 			int selectedIndex = addedFilterList.getSelectedIndex();
 			if (selectedIndex != -1) {
 				addedFilterListModel.remove(selectedIndex);
@@ -458,6 +486,133 @@ public class FilterUI extends JFrame {
     }
 
     /**
+     * Edits an existing filter by loading its current parameters into the parameter panel.
+     * @param filterIndex The index of the filter to edit in the addedFilters list
+     * @throws Exception If there's an error loading the filter parameters
+     */
+    private void editFilter(int filterIndex) throws Exception {
+        if (filterIndex < 0 || filterIndex >= addedFilters.size()) {
+            throw new IllegalArgumentException("Invalid filter index: " + filterIndex);
+        }
+        
+        editingFilterIndex = filterIndex;
+        Filter filterToEdit = addedFilters.get(filterIndex);
+        
+        // Add editing indicator to the list
+        String filterName = filterToEdit.getClass().getSimpleName();
+        addedFilterListModel.set(filterIndex, "✏️ " + filterName + ": " + filterToEdit.getRequirements());
+        
+        // Create a new parameter panel with the filter's current values
+        JPanel filterPanel = filterToEdit.getParameterPanel();
+        
+        // Apply consistent styling to filter parameter panels
+        filterPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                "Editing: " + filterToEdit.getClass().getSimpleName(),
+                0, 0, new Font("Dialog", Font.BOLD, 12)
+            ),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        
+        // Create a container panel with the filter panel and action buttons
+        JPanel containerPanel = new JPanel(new BorderLayout());
+        containerPanel.add(filterPanel, BorderLayout.CENTER);
+        
+        // Create button panel for Save/Cancel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+        
+        saveButton.addActionListener(e -> {
+            try {
+                saveEditedFilter();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error saving filter: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        cancelButton.addActionListener(e -> {
+            cancelEditing();
+        });
+        
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(saveButton);
+        containerPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Disable Filter select Combobox and Added Filter list
+        addedFilterList.setEnabled(false);
+        filterSelectionBox.setEnabled(false);
+        
+        // Update the parameter panel
+        parameterPanel.removeAll();
+        parameterPanel.add(containerPanel);
+        parameterPanel.revalidate();
+        parameterPanel.repaint();
+    }
+    
+    /**
+     * Saves the edited filter with the new parameters.
+     * @throws Exception If there's an error saving the filter
+     */
+    private void saveEditedFilter() throws Exception {
+        if (editingFilterIndex == -1) {
+            throw new IllegalStateException("No filter is being edited");
+        }
+        
+        Filter filterToEdit = addedFilters.get(editingFilterIndex);
+        JPanel containerPanel = (JPanel) parameterPanel.getComponent(0);
+        JPanel filterPanel = (JPanel) containerPanel.getComponent(0);
+        
+        // Set the new requirements from the parameter panel
+        filterToEdit.setRequirements(filterPanel);
+        
+        // Update the list display
+        String filterName = filterToEdit.getClass().getSimpleName();
+        addedFilterListModel.set(editingFilterIndex, filterName + ": " + filterToEdit.getRequirements());
+        
+        cleanupEditing();
+        
+        updateStatus();
+    }
+    
+    /**
+     * Cancels the current editing operation and returns to normal view.
+     */
+    private void cancelEditing() {
+        // Remove editing indicator from the list
+        if (editingFilterIndex != -1) {
+            Filter filterToEdit = addedFilters.get(editingFilterIndex);
+            String filterName = filterToEdit.getClass().getSimpleName();
+            addedFilterListModel.set(editingFilterIndex, filterName + ": " + filterToEdit.getRequirements());
+        }
+        
+        cleanupEditing();
+    }
+
+    /**
+     * Common editing cleanup
+     */
+    private void cleanupEditing() {
+        
+        // Disable Filter select Combobox and Added Filter list
+        addedFilterList.setEnabled(true);
+        filterSelectionBox.setEnabled(true);
+
+        editingFilterIndex = -1;
+
+        // Reset to normal parameter panel view
+        try {
+            updateParameterPanel();
+        } catch (Exception e) {
+            // If there's an error, just clear the panel
+            parameterPanel.removeAll();
+            parameterPanel.revalidate();
+            parameterPanel.repaint();
+        }
+    }
+
+    /**
      * Updates the parameter input panel to match the selected filter.
      * This dynamically renders the input fields defined by the selected filter.
      * @throws SecurityException 
@@ -468,6 +623,11 @@ public class FilterUI extends JFrame {
      * @throws InstantiationException 
      */
     private void updateParameterPanel() throws Exception {
+        // Don't update if we're in editing mode
+        if (editingFilterIndex != -1) {
+            return;
+        }
+        
         parameterPanel.removeAll(); // Clear existing components
         String selectedFilter = (String) filterSelectionBox.getSelectedItem();
         Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
@@ -500,6 +660,11 @@ public class FilterUI extends JFrame {
      * 
      */
     private void addFilter() throws Exception {
+        // Don't allow adding new filters while editing
+        if (editingFilterIndex != -1) {
+            JOptionPane.showMessageDialog(this, "Please save or cancel the current edit before adding a new filter.", "Editing in Progress", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
     		
         String selectedFilter = (String) filterSelectionBox.getSelectedItem();
         Filter filter = availableFilters.get(selectedFilter).getClass().getDeclaredConstructor().newInstance();
@@ -521,6 +686,12 @@ public class FilterUI extends JFrame {
      * Allows the user to set parameters for sub-filters dynamically.
      */
     private void addCompositeFilter() {
+        // Don't allow adding composite filters while editing
+        if (editingFilterIndex != -1) {
+            JOptionPane.showMessageDialog(this, "Please save or cancel the current edit before adding a new filter.", "Editing in Progress", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
         createCompositeFilter().thenAccept(compositeFilter -> {
             if (compositeFilter != null) {
                 addedFilters.add(compositeFilter);

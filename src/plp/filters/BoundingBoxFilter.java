@@ -45,26 +45,22 @@ public class BoundingBoxFilter implements InitialFilter {
     }
     
 	@Override
-	public void setRequirements(JPanel modifiedParameterPanel) {
+	public void setRequirements(JPanel modifiedParameterPanel) throws IllegalArgumentException {
     	JTextField[] fields = (JTextField[]) modifiedParameterPanel.getClientProperty("fields"); // Get the first component (the filter's parameter panel), Extract input fields
 
-        try {
-        	String[] inputValues = new String[fields.length];
-            for (int i = 0; i < fields.length; i++) {
-                // Explicitly focus out of each field to ensure the latest value is captured
-                fields[i].transferFocus();
-                inputValues[i] = fields[i].getText();
-            }
-
-            System.out.println(Arrays.toString(inputValues));
-            double minLat = Double.parseDouble(inputValues[0]);
-            double maxLat = Double.parseDouble(inputValues[1]);
-            double minLon = Double.parseDouble(inputValues[2]);
-            double maxLon = Double.parseDouble(inputValues[3]);
-        	setRequirements(new double[]{minLat, maxLat, minLon, maxLon});
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(modifiedParameterPanel, "Invalid input: " + ex.getMessage());
+        String[] inputValues = new String[fields.length];
+        for (int i = 0; i < fields.length; i++) {
+            // Explicitly focus out of each field to ensure the latest value is captured
+            fields[i].transferFocus();
+            inputValues[i] = fields[i].getText();
         }
+
+        System.out.println(Arrays.toString(inputValues));
+        double minLat = Double.parseDouble(inputValues[0]);
+        double maxLat = Double.parseDouble(inputValues[1]);
+        double minLon = Double.parseDouble(inputValues[2]);
+        double maxLon = Double.parseDouble(inputValues[3]);
+        setRequirements(new double[]{minLat, maxLat, minLon, maxLon});
 	}
 
 	@Override
@@ -143,19 +139,19 @@ public class BoundingBoxFilter implements InitialFilter {
         JPanel panel = new JPanel(new GridLayout(0, 2));
         
         panel.add(new JLabel("Min Latitude:"));
-        JTextField minLatField = new JTextField("33.5");
+        JTextField minLatField = new JTextField(minLatitude == 0.0 ? "33.5" : String.valueOf(minLatitude));
         panel.add(minLatField);
         
         panel.add(new JLabel("Max Latitude:"));
-        JTextField maxLatField = new JTextField("34.2");
+        JTextField maxLatField = new JTextField(maxLatitude == 0.0 ? "34.2" : String.valueOf(maxLatitude));
         panel.add(maxLatField);
         
         panel.add(new JLabel("Min Longitude:"));
-        JTextField minLonField = new JTextField("-116.5");
+        JTextField minLonField = new JTextField(minLongitude == 0.0 ? "-116.5" : String.valueOf(minLongitude));
         panel.add(minLonField);
         
         panel.add(new JLabel("Max Longitude:"));
-        JTextField maxLonField = new JTextField("-115");
+        JTextField maxLonField = new JTextField(maxLongitude == 0.0 ? "-115" : String.valueOf(maxLongitude));
         panel.add(maxLonField);
 
         panel.putClientProperty("fields", new JTextField[]{minLatField, maxLatField, minLonField, maxLonField});
